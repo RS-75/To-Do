@@ -308,6 +308,63 @@
     cursor:pointer;
   }
 
+  /* quick-add fab (Aujourd'hui only) */
+  .quick-fab{
+    position:fixed;
+    right:20px;
+    bottom:88px;
+    width:50px;height:50px;
+    border-radius:50%;
+    background:var(--ink);
+    color:var(--card);
+    border:none;
+    font-size:26px;
+    font-weight:400;
+    cursor:pointer;
+    box-shadow:0 4px 14px rgba(59,50,38,.28);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:21;
+  }
+  .quick-fab.show{display:flex;}
+
+  .qa-backdrop{
+    position:fixed;inset:0;
+    background:rgba(59,50,38,.28);
+    display:none;
+    z-index:30;
+  }
+  .qa-backdrop.open{display:block;}
+  .qa-sheet{
+    position:fixed;
+    left:0;right:0;bottom:0;
+    background:var(--card);
+    border-radius:20px 20px 0 0;
+    padding:20px 18px 24px;
+    max-width:460px;
+    margin:0 auto;
+    transform:translateY(100%);
+    transition:transform .22s ease;
+    z-index:31;
+  }
+  .qa-sheet.open{transform:translateY(0);}
+  .qa-title{
+    font-family:'Fraunces',serif;
+    font-size:19px;
+    font-weight:500;
+    margin:0 0 14px;
+  }
+  .qa-sheet input[type=text]{margin-bottom:10px;}
+  .qa-sheet input[type=datetime-local]{margin-bottom:0;}
+  .qa-actions{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+  }
+  .qa-actions .btn{flex:1;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);}
+
   /* bottom tab bar */
   .tabbar{
     position:fixed;
@@ -409,6 +466,21 @@
 
 </div>
 
+<button class="quick-fab" id="quickFab" aria-label="Ajouter rapidement">+</button>
+
+<div class="qa-backdrop" id="qaBackdrop"></div>
+<div class="qa-sheet" id="qaSheet">
+  <div class="qa-title">Ajout rapide</div>
+  <form id="qaForm">
+    <input type="text" id="qaTaskInput" placeholder="Que faut-il faire ?" autocomplete="off">
+    <input type="datetime-local" id="qaDateInput">
+    <div class="qa-actions">
+      <button type="button" class="btn btn-ghost" id="qaCancelBtn">Annuler</button>
+      <button type="submit" class="btn btn-primary" id="qaSubmitBtn" disabled>Ajouter</button>
+    </div>
+  </form>
+</div>
+
 <nav class="tabbar">
   <button class="tab-btn active" data-tab="today" style="position:relative;">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
@@ -455,6 +527,15 @@ const confirmNote = document.getElementById('confirmNote');
 const notifHint = document.getElementById('notifHint');
 const notifBtn = document.getElementById('notifBtn');
 
+const quickFab = document.getElementById('quickFab');
+const qaBackdrop = document.getElementById('qaBackdrop');
+const qaSheet = document.getElementById('qaSheet');
+const qaForm = document.getElementById('qaForm');
+const qaTaskInput = document.getElementById('qaTaskInput');
+const qaDateInput = document.getElementById('qaDateInput');
+const qaSubmitBtn = document.getElementById('qaSubmitBtn');
+const qaCancelBtn = document.getElementById('qaCancelBtn');
+
 const TAB_TITLES = { today: "Aujourd'hui", upcoming: 'À venir', add: 'Ajouter', done: 'Fait' };
 
 dayName.textContent = new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
@@ -486,6 +567,7 @@ function switchTab(tab){
   document.getElementById('panel-' + tab).classList.add('active');
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   pageTitle.textContent = TAB_TITLES[tab];
+  quickFab.classList.toggle('show', tab === 'today');
   if(tab === 'today') setTimeout(scrollToNow, 50);
 }
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -686,6 +768,42 @@ addForm.addEventListener('submit', async (e)=>{
   setTimeout(()=> confirmNote.classList.remove('show'), 1400);
 });
 
+/* ---------- quick add (bouton + sur Aujourd'hui) ---------- */
+function openQuickAdd(){
+  qaBackdrop.classList.add('open');
+  qaSheet.classList.add('open');
+  setTimeout(()=> qaTaskInput.focus(), 150);
+}
+function closeQuickAdd(){
+  qaBackdrop.classList.remove('open');
+  qaSheet.classList.remove('open');
+  qaTaskInput.value = '';
+  qaDateInput.value = '';
+  qaSubmitBtn.disabled = true;
+}
+quickFab.addEventListener('click', openQuickAdd);
+qaCancelBtn.addEventListener('click', closeQuickAdd);
+qaBackdrop.addEventListener('click', closeQuickAdd);
+qaTaskInput.addEventListener('input', ()=>{
+  qaSubmitBtn.disabled = qaTaskInput.value.trim().length === 0;
+});
+qaForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const text = qaTaskInput.value.trim();
+  if(!text) return;
+  const t = {
+    id: uid(),
+    text,
+    due: qaDateInput.value ? new Date(qaDateInput.value).toISOString() : null,
+    done: false,
+    createdAt: Date.now()
+  };
+  tasks.push(t);
+  renderAll();
+  await saveTask(t);
+  closeQuickAdd();
+});
+
 /* ---------- notifications ---------- */
 function setupNotifPrompt(){
   if(!('Notification' in window)) return;
@@ -713,6 +831,7 @@ setInterval(()=>{ checkReminders(); renderAll(); }, 30000);
 
 loadTasks();
 setupNotifPrompt();
+quickFab.classList.add('show');
 setTimeout(scrollToNow, 200);
 </script>
 </body>
