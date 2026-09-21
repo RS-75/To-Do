@@ -12,6 +12,7 @@
 <link rel="icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --bg:#ECE3D0;
@@ -381,6 +382,7 @@
   .task-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .task-title.done{text-decoration:line-through;color:var(--ink-soft);}
   .task-time{font-size:10.5px;color:var(--ink-soft);}
+  .meet-link{color:var(--accent);text-decoration:none;font-weight:600;}
   .task-del{background:none;border:none;color:var(--ink-faint);font-size:15px;cursor:pointer;flex:0 0 auto;padding:0;line-height:1;}
 
   .now-line{
@@ -424,6 +426,55 @@
   }
 
   /* Ajouter tab */
+  .g-status{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:18px;
+  }
+  .g-status button{
+    background:var(--ink);
+    color:var(--card);
+    border:none;
+    border-radius:7px;
+    padding:6px 12px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .g-status.connected button{
+    background:transparent;
+    color:var(--rust);
+    border:1px solid var(--line);
+  }
+  .meet-toggle{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    font-size:13.5px;
+    color:var(--ink);
+    margin:2px 0 10px;
+    cursor:pointer;
+  }
+  .meet-toggle input{ width:17px;height:17px;accent-color:var(--accent); }
+  .meet-hint{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin:-4px 0 14px;
+  }
+  .meet-error{
+    font-size:12.5px;
+    color:var(--rust);
+    text-align:center;
+    margin-top:10px;
+  }
+
   .add-panel-title{
     font-family:'Fraunces',serif;
     font-size:22px;
@@ -667,13 +718,31 @@
   <!-- AJOUTER -->
   <section class="panel" id="panel-add">
     <div class="add-panel-title">Nouvelle tâche</div>
+
+    <div class="g-status" id="gStatus">
+      <span id="gStatusText">Google non connecté</span>
+      <button type="button" id="gConnectBtn">Se connecter</button>
+    </div>
+
     <form id="addForm">
       <div class="field-label">Tâche</div>
       <input type="text" id="taskInput" placeholder="Que faut-il faire ?" autocomplete="off">
       <div class="field-label">Rappel (optionnel)</div>
       <input type="datetime-local" id="dateInput">
+
+      <label class="meet-toggle">
+        <input type="checkbox" id="meetCheckbox">
+        <span>Ajouter une visioconférence Google Meet</span>
+      </label>
+      <div id="meetFields" style="display:none;">
+        <div class="field-label">Email de l'invité</div>
+        <input type="email" id="meetEmailInput" placeholder="prenom@exemple.com" autocomplete="off">
+        <div class="meet-hint">Nécessite un rappel avec date et heure. L'invitation est envoyée automatiquement par Google.</div>
+      </div>
+
       <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Ajouter</button>
       <div class="confirm-note" id="confirmNote">Ajouté ✓</div>
+      <div class="meet-error" id="meetError" style="display:none;"></div>
     </form>
   </section>
 
@@ -692,6 +761,14 @@
   <form id="qaForm">
     <input type="text" id="qaTaskInput" placeholder="Que faut-il faire ?" autocomplete="off">
     <input type="datetime-local" id="qaDateInput">
+    <label class="meet-toggle">
+      <input type="checkbox" id="qaMeetCheckbox">
+      <span>Visioconférence Google Meet</span>
+    </label>
+    <div id="qaMeetFields" style="display:none;">
+      <input type="email" id="qaMeetEmailInput" placeholder="Email de l'invité" autocomplete="off">
+    </div>
+    <div class="meet-error" id="qaMeetError" style="display:none;"></div>
     <div class="qa-actions">
       <button type="button" class="btn btn-ghost" id="qaCancelBtn">Annuler</button>
       <button type="submit" class="btn btn-primary" id="qaSubmitBtn" disabled>Ajouter</button>
@@ -754,6 +831,18 @@ const upcomingWrap = document.getElementById('upcomingWrap');
 const doneWrap = document.getElementById('doneWrap');
 const ringProgress = document.getElementById('ringProgress');
 const ringNum = document.getElementById('ringNum');
+
+const gStatus = document.getElementById('gStatus');
+const gStatusText = document.getElementById('gStatusText');
+const gConnectBtn = document.getElementById('gConnectBtn');
+const meetCheckbox = document.getElementById('meetCheckbox');
+const meetFields = document.getElementById('meetFields');
+const meetEmailInput = document.getElementById('meetEmailInput');
+const meetError = document.getElementById('meetError');
+const qaMeetCheckbox = document.getElementById('qaMeetCheckbox');
+const qaMeetFields = document.getElementById('qaMeetFields');
+const qaMeetEmailInput = document.getElementById('qaMeetEmailInput');
+const qaMeetError = document.getElementById('qaMeetError');
 
 const addForm = document.getElementById('addForm');
 const taskInput = document.getElementById('taskInput');
@@ -1002,7 +1091,7 @@ function renderTimeline(){
       <button class="task-check ${t.done?'done':''}" data-action="toggle" data-id="${t.id}"></button>
       <div class="task-info">
         <div class="task-title ${t.done?'done':''}">${escapeHtml(t.text)}</div>
-        <div class="task-time">${fmtTime(t.due)}${late?' · en retard':''}</div>
+        <div class="task-time">${fmtTime(t.due)}${late?' · en retard':''}${t.meetLink ? ` · <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥 Meet</a>` : ''}</div>
       </div>
       <button class="task-del" data-action="delete" data-id="${t.id}">×</button>
     `;
@@ -1045,7 +1134,7 @@ function renderUpcoming(){
       ${upcoming.map(t => `
         <li class="agenda-item" data-id="${t.id}">
           <span class="dot"></span>
-          <span class="txt">${escapeHtml(t.text)}</span>
+          <span class="txt">${escapeHtml(t.text)}${t.meetLink ? ` <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥</a>` : ''}</span>
           <span class="when">${fmtDateShort(t.due)}</span>
           <button class="del" data-action="delete" data-id="${t.id}">×</button>
         </li>
@@ -1138,6 +1227,7 @@ document.addEventListener('click', async (e)=>{
     tasks = tasks.filter(x=>x.id!==id);
     renderAll();
     await deleteTaskStorage(id);
+    if(t.gcalEventId) deleteGoogleEvent(t.gcalEventId);
   }
 });
 
@@ -1149,21 +1239,56 @@ addForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
   const text = taskInput.value.trim();
   if(!text) return;
+  meetError.style.display = 'none';
+
+  const wantsMeet = meetCheckbox.checked;
+  const email = meetEmailInput.value.trim();
+  if(wantsMeet && !dateInput.value){
+    meetError.textContent = 'Choisis une date et une heure de rappel pour créer la visioconférence.';
+    meetError.style.display = 'block';
+    return;
+  }
+
   const t = {
     id: uid(),
     text,
     due: dateInput.value ? new Date(dateInput.value).toISOString() : null,
     done: false,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    meetLink: null,
+    gcalEventId: null
   };
   tasks.push(t);
   renderAll();
   await saveTask(t);
+
   taskInput.value = '';
   dateInput.value = '';
   submitBtn.disabled = true;
   confirmNote.classList.add('show');
   setTimeout(()=> confirmNote.classList.remove('show'), 1400);
+
+  if(wantsMeet){
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Création du Meet…';
+    try{
+      const result = await createGoogleMeetEvent(t.text, t.due, email, t.id);
+      t.meetLink = result.meetLink;
+      t.gcalEventId = result.gcalEventId;
+      await saveTask(t);
+      renderAll();
+      meetCheckbox.checked = false;
+      meetFields.style.display = 'none';
+      meetEmailInput.value = '';
+    }catch(err){
+      console.error(err);
+      meetError.textContent = "La tâche est ajoutée, mais la visioconférence n'a pas pu être créée : " + err.message;
+      meetError.style.display = 'block';
+    }finally{
+      submitBtn.textContent = 'Ajouter';
+      submitBtn.disabled = false;
+    }
+  }
 });
 
 /* ---------- quick add (bouton + sur Aujourd'hui) ---------- */
@@ -1182,6 +1307,10 @@ function closeQuickAdd(){
   qaTaskInput.value = '';
   qaDateInput.value = '';
   qaSubmitBtn.disabled = true;
+  qaMeetCheckbox.checked = false;
+  qaMeetFields.style.display = 'none';
+  qaMeetEmailInput.value = '';
+  qaMeetError.style.display = 'none';
 }
 quickFab.addEventListener('click', openQuickAdd);
 qaCancelBtn.addEventListener('click', closeQuickAdd);
@@ -1193,17 +1322,193 @@ qaForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
   const text = qaTaskInput.value.trim();
   if(!text) return;
+  qaMeetError.style.display = 'none';
+
+  const wantsMeet = qaMeetCheckbox.checked;
+  const email = qaMeetEmailInput.value.trim();
+  if(wantsMeet && !qaDateInput.value){
+    qaMeetError.textContent = 'Choisis une heure pour créer la visioconférence.';
+    qaMeetError.style.display = 'block';
+    return;
+  }
+
   const t = {
     id: uid(),
     text,
     due: qaDateInput.value ? new Date(qaDateInput.value).toISOString() : null,
     done: false,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    meetLink: null,
+    gcalEventId: null
   };
   tasks.push(t);
   renderAll();
   await saveTask(t);
+
+  if(wantsMeet){
+    qaSubmitBtn.disabled = true;
+    qaSubmitBtn.textContent = 'Création du Meet…';
+    try{
+      const result = await createGoogleMeetEvent(t.text, t.due, email, t.id);
+      t.meetLink = result.meetLink;
+      t.gcalEventId = result.gcalEventId;
+      await saveTask(t);
+      renderAll();
+      qaSubmitBtn.textContent = 'Ajouter';
+      qaSubmitBtn.disabled = false;
+    }catch(err){
+      console.error(err);
+      qaMeetError.textContent = "Tâche ajoutée, mais le Meet a échoué : " + err.message;
+      qaMeetError.style.display = 'block';
+      qaSubmitBtn.textContent = 'Ajouter';
+      qaSubmitBtn.disabled = false;
+      return;
+    }
+  }
   closeQuickAdd();
+});
+
+/* ---------- Google Calendar / Meet ---------- */
+const GOOGLE_CLIENT_ID = '673642934274-0oc0fkun3n74fp4i1agdnic2rcscp8sr.apps.googleusercontent.com';
+const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+
+let gTokenClient = null;
+let gAccessToken = null;
+let gTokenExpiry = 0;
+
+function updateGoogleStatusUI(connected){
+  if(connected){
+    gStatusText.textContent = 'Google connecté ✓';
+    gConnectBtn.textContent = 'Déconnecter';
+    gStatus.classList.add('connected');
+  } else {
+    gStatusText.textContent = 'Google non connecté';
+    gConnectBtn.textContent = 'Se connecter';
+    gStatus.classList.remove('connected');
+  }
+}
+
+function initGoogleAuth(){
+  if(!window.google || !window.google.accounts || !window.google.accounts.oauth2){
+    setTimeout(initGoogleAuth, 300);
+    return;
+  }
+  gTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_SCOPE,
+    callback: ()=>{}
+  });
+  updateGoogleStatusUI(!!(gAccessToken && Date.now() < gTokenExpiry));
+}
+
+function requestGoogleToken(interactive){
+  return new Promise((resolve, reject)=>{
+    if(!gTokenClient){ reject(new Error("Google n'est pas encore chargé, réessaie dans un instant.")); return; }
+    gTokenClient.callback = (resp)=>{
+      if(resp.error){ reject(new Error(resp.error)); return; }
+      gAccessToken = resp.access_token;
+      gTokenExpiry = Date.now() + (resp.expires_in * 1000) - 60000;
+      localStorage.setItem('google_was_connected', '1');
+      updateGoogleStatusUI(true);
+      resolve(gAccessToken);
+    };
+    try{
+      gTokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+    }catch(e){ reject(e); }
+  });
+}
+
+async function ensureGoogleToken(){
+  if(gAccessToken && Date.now() < gTokenExpiry) return gAccessToken;
+  try{
+    return await requestGoogleToken(false);
+  }catch(e){
+    return await requestGoogleToken(true);
+  }
+}
+
+function disconnectGoogle(){
+  if(gAccessToken && window.google){
+    google.accounts.oauth2.revoke(gAccessToken, ()=>{});
+  }
+  gAccessToken = null;
+  gTokenExpiry = 0;
+  localStorage.removeItem('google_was_connected');
+  updateGoogleStatusUI(false);
+}
+
+gConnectBtn.addEventListener('click', async ()=>{
+  if(gAccessToken && Date.now() < gTokenExpiry){
+    disconnectGoogle();
+    return;
+  }
+  try{
+    await requestGoogleToken(true);
+  }catch(e){
+    console.error(e);
+  }
+});
+
+async function createGoogleMeetEvent(taskText, dueIso, attendeeEmail, requestId){
+  const token = await ensureGoogleToken();
+  const start = new Date(dueIso);
+  const end = new Date(start.getTime() + 30 * 60000);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const body = {
+    summary: taskText,
+    start: { dateTime: start.toISOString(), timeZone: tz },
+    end: { dateTime: end.toISOString(), timeZone: tz },
+    attendees: attendeeEmail ? [{ email: attendeeEmail }] : [],
+    conferenceData: {
+      createRequest: {
+        requestId: requestId,
+        conferenceSolutionKey: { type: 'hangoutsMeet' }
+      }
+    }
+  };
+
+  const res = await fetch(
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1&sendUpdates=all',
+    {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }
+  );
+
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    throw new Error((err.error && err.error.message) || 'Erreur Google Calendar (' + res.status + ')');
+  }
+  const data = await res.json();
+  const videoEntry = (data.conferenceData && data.conferenceData.entryPoints || []).find(e => e.entryPointType === 'video');
+  return {
+    gcalEventId: data.id,
+    meetLink: (videoEntry && videoEntry.uri) || data.hangoutLink || null
+  };
+}
+
+async function deleteGoogleEvent(gcalEventId){
+  if(!gcalEventId) return;
+  try{
+    const token = await ensureGoogleToken();
+    await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + gcalEventId + '?sendUpdates=all', {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+  }catch(e){ console.error('Suppression Google Calendar échouée', e); }
+}
+
+/* Meet toggle show/hide (main Ajouter form) */
+meetCheckbox.addEventListener('change', ()=>{
+  meetFields.style.display = meetCheckbox.checked ? 'block' : 'none';
+  meetError.style.display = 'none';
+});
+/* Meet toggle show/hide (quick add) */
+qaMeetCheckbox.addEventListener('change', ()=>{
+  qaMeetFields.style.display = qaMeetCheckbox.checked ? 'block' : 'none';
+  qaMeetError.style.display = 'none';
 });
 
 /* ---------- notifications ---------- */
@@ -1233,6 +1538,7 @@ setInterval(()=>{ checkReminders(); renderAll(); }, 30000);
 
 loadTasks();
 updateTodayHeader();
+initGoogleAuth();
 setupNotifPrompt();
 quickFab.classList.add('show');
 setTimeout(scrollToNow, 200);
