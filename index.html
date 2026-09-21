@@ -82,6 +82,132 @@
     font-weight:500;
   }
 
+  /* view switcher (Jour / Mois / Année) */
+  .view-switch{
+    display:flex;
+    background:var(--card-soft);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:3px;
+    margin-bottom:20px;
+    gap:2px;
+  }
+  .view-btn{
+    flex:1;
+    background:none;
+    border:none;
+    border-radius:8px;
+    padding:8px 4px;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .view-btn.active{
+    background:#FFFFFF;
+    color:var(--ink);
+    box-shadow:0 1px 3px rgba(59,50,38,.10);
+  }
+
+  /* month / year nav */
+  .cal-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .cal-nav-label{
+    font-family:'Fraunces',serif;
+    font-size:17px;
+    font-weight:500;
+    text-transform:capitalize;
+  }
+  .cal-arrow{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:20px;
+    padding:4px 10px;
+    cursor:pointer;
+  }
+
+  /* month grid */
+  .month-dow-row{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    margin-bottom:6px;
+  }
+  .month-dow-row span{
+    text-align:center;
+    font-size:10.5px;
+    color:var(--ink-faint);
+    text-transform:lowercase;
+  }
+  .month-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    grid-auto-rows:44px;
+    gap:2px;
+    background:#FFFFFF;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:8px;
+    margin-bottom:24px;
+  }
+  .month-cell{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    background:none;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .month-cell .num{
+    width:26px;height:26px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;
+    color:var(--ink);
+  }
+  .month-cell.outside .num{ color:var(--ink-faint); opacity:.5; }
+  .month-cell.past .num{ color:var(--ink-faint); }
+  .month-cell.today .num{ background:var(--ink); color:#FFFFFF; }
+  .month-cell.selected:not(.today) .num{ border:1.5px solid var(--accent); }
+  .month-cell .dot-indicator{ width:4px;height:4px;border-radius:50%;background:var(--accent); }
+  .month-cell .dot-indicator.empty{ background:transparent; }
+
+  /* year grid */
+  .year-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin-bottom:24px;
+  }
+  .month-tile{
+    background:#FFFFFF;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:14px 8px;
+    text-align:center;
+    cursor:pointer;
+  }
+  .month-tile.current{ border-color:var(--ink); border-width:1.5px; }
+  .month-tile .m-name{
+    font-family:'Fraunces',serif;
+    font-size:14px;
+    text-transform:capitalize;
+    margin-bottom:6px;
+  }
+  .month-tile .m-count{
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+
   /* week strip */
   .week-strip{
     display:flex;
@@ -497,12 +623,39 @@
 
   <!-- AUJOURD'HUI -->
   <section class="panel active" id="panel-today">
-    <div class="week-strip" id="weekStrip"></div>
-    <div id="trayWrap"></div>
-    <div class="timeline-outer">
-      <div class="timeline-scroll" id="timelineScroll">
-        <div class="timeline" id="timeline"></div>
+    <div class="view-switch" id="viewSwitch">
+      <button class="view-btn active" data-view="day">Jour</button>
+      <button class="view-btn" data-view="month">Mois</button>
+      <button class="view-btn" data-view="year">Année</button>
+    </div>
+
+    <div class="view-content" id="view-day">
+      <div class="week-strip" id="weekStrip"></div>
+      <div id="trayWrap"></div>
+      <div class="timeline-outer">
+        <div class="timeline-scroll" id="timelineScroll">
+          <div class="timeline" id="timeline"></div>
+        </div>
       </div>
+    </div>
+
+    <div class="view-content" id="view-month" style="display:none;">
+      <div class="cal-nav">
+        <button class="cal-arrow" data-month-dir="-1">‹</button>
+        <div class="cal-nav-label" id="monthLabel"></div>
+        <button class="cal-arrow" data-month-dir="1">›</button>
+      </div>
+      <div class="month-dow-row" id="monthDowRow"></div>
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
+
+    <div class="view-content" id="view-year" style="display:none;">
+      <div class="cal-nav">
+        <button class="cal-arrow" data-year-dir="-1">‹</button>
+        <div class="cal-nav-label" id="yearLabel"></div>
+        <button class="cal-arrow" data-year-dir="1">›</button>
+      </div>
+      <div class="year-grid" id="yearGrid"></div>
     </div>
   </section>
 
@@ -578,12 +731,25 @@ function startOfDay(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
 let selectedDate = startOfDay(new Date());
 let weekAnchor = new Date(selectedDate);
 
+let viewMode = 'day'; // 'day' | 'month' | 'year'
+let monthAnchor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+let yearAnchor = selectedDate.getFullYear();
+
 const dayName = document.getElementById('dayName');
 const pageTitle = document.getElementById('pageTitle');
 const timelineEl = document.getElementById('timeline');
 const timelineScroll = document.getElementById('timelineScroll');
 const weekStrip = document.getElementById('weekStrip');
 const trayWrap = document.getElementById('trayWrap');
+const viewDay = document.getElementById('view-day');
+const viewMonth = document.getElementById('view-month');
+const viewYear = document.getElementById('view-year');
+const monthLabel = document.getElementById('monthLabel');
+const monthDowRow = document.getElementById('monthDowRow');
+const monthGrid = document.getElementById('monthGrid');
+const yearLabel = document.getElementById('yearLabel');
+const yearGrid = document.getElementById('yearGrid');
+const ringWrap = document.querySelector('.ring-wrap');
 const upcomingWrap = document.getElementById('upcomingWrap');
 const doneWrap = document.getElementById('doneWrap');
 const ringProgress = document.getElementById('ringProgress');
@@ -630,6 +796,16 @@ async function deleteTaskStorage(id){ persistAll(); }
 
 /* ---------- tabs ---------- */
 function updateTodayHeader(){
+  if(viewMode === 'month'){
+    pageTitle.textContent = 'Mois';
+    dayName.textContent = monthAnchor.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+    return;
+  }
+  if(viewMode === 'year'){
+    pageTitle.textContent = 'Année';
+    dayName.textContent = String(yearAnchor);
+    return;
+  }
   const today = startOfDay(new Date());
   if(selectedDate.getTime() === today.getTime()){
     pageTitle.textContent = "Aujourd'hui";
@@ -671,6 +847,73 @@ function renderAll(){
   renderTimeline();
   renderUpcoming();
   renderDone();
+  renderMonthGrid();
+  renderYearGrid();
+}
+
+function switchView(view){
+  viewMode = view;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  viewDay.style.display = view === 'day' ? '' : 'none';
+  viewMonth.style.display = view === 'month' ? '' : 'none';
+  viewYear.style.display = view === 'year' ? '' : 'none';
+  ringWrap.style.display = view === 'day' ? '' : 'none';
+  if(activeTab === 'today') updateTodayHeader();
+  if(view === 'day') setTimeout(scrollToNow, 50);
+}
+document.querySelectorAll('.view-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchView(btn.dataset.view));
+});
+
+const MONTH_DOWS = ['lun','mar','mer','jeu','ven','sam','dim'];
+
+function renderMonthGrid(){
+  const y = monthAnchor.getFullYear();
+  const m = monthAnchor.getMonth();
+  monthLabel.textContent = monthAnchor.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+  monthDowRow.innerHTML = MONTH_DOWS.map(d => `<span>${d}</span>`).join('');
+
+  const firstOfMonth = new Date(y, m, 1);
+  const startDow = (firstOfMonth.getDay() + 6) % 7; // Monday=0
+  const gridStart = new Date(y, m, 1 - startDow);
+  const today = startOfDay(new Date());
+
+  let html = '';
+  for(let i=0; i<42; i++){
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    const outside = d.getMonth() !== m;
+    const isToday = d.getTime() === today.getTime();
+    const isSelected = d.getTime() === selectedDate.getTime();
+    const isPast = d.getTime() < today.getTime() && !isToday;
+    const hasTasks = tasks.some(t => t.due && isSameDay(new Date(t.due), d));
+    html += `
+      <button class="month-cell ${outside?'outside':''} ${isToday?'today':''} ${isSelected?'selected':''} ${isPast?'past':''}" data-date="${d.getTime()}">
+        <div class="num">${d.getDate()}</div>
+        <div class="dot-indicator ${hasTasks?'':'empty'}"></div>
+      </button>
+    `;
+  }
+  monthGrid.innerHTML = html;
+}
+
+const MONTH_NAMES = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+
+function renderYearGrid(){
+  yearLabel.textContent = String(yearAnchor);
+  const now = new Date();
+  let html = '';
+  for(let m=0; m<12; m++){
+    const count = tasks.filter(t => t.due && new Date(t.due).getFullYear() === yearAnchor && new Date(t.due).getMonth() === m).length;
+    const isCurrent = now.getFullYear() === yearAnchor && now.getMonth() === m;
+    html += `
+      <div class="month-tile ${isCurrent?'current':''}" data-month-index="${m}">
+        <div class="m-name">${MONTH_NAMES[m]}</div>
+        <div class="m-count">${count ? count + ' tâche' + (count>1?'s':'') : '—'}</div>
+      </div>
+    `;
+  }
+  yearGrid.innerHTML = html;
 }
 
 function renderWeekStrip(){
@@ -849,6 +1092,35 @@ document.addEventListener('click', async (e)=>{
     weekAnchor = new Date(selectedDate);
     renderAll();
     if(activeTab === 'today') updateTodayHeader();
+    return;
+  }
+  const monthDirBtn = e.target.closest('button[data-month-dir]');
+  if(monthDirBtn){
+    monthAnchor.setMonth(monthAnchor.getMonth() + parseInt(monthDirBtn.dataset.monthDir, 10));
+    renderMonthGrid();
+    return;
+  }
+  const yearDirBtn = e.target.closest('button[data-year-dir]');
+  if(yearDirBtn){
+    yearAnchor += parseInt(yearDirBtn.dataset.yearDir, 10);
+    renderYearGrid();
+    return;
+  }
+  const monthCell = e.target.closest('.month-cell[data-date]');
+  if(monthCell){
+    selectedDate = startOfDay(new Date(parseInt(monthCell.dataset.date, 10)));
+    weekAnchor = new Date(selectedDate);
+    monthAnchor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    renderAll();
+    switchView('day');
+    return;
+  }
+  const monthTile = e.target.closest('.month-tile[data-month-index]');
+  if(monthTile){
+    const mIdx = parseInt(monthTile.dataset.monthIndex, 10);
+    monthAnchor = new Date(yearAnchor, mIdx, 1);
+    renderMonthGrid();
+    switchView('month');
     return;
   }
   const btn = e.target.closest('button[data-action]');
