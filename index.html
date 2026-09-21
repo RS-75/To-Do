@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Journée</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,6 +29,9 @@
     --rust-soft:#EAD2C7;
   }
   *{box-sizing:border-box;}
+  html, body{
+    touch-action:manipulation;
+  }
   body{
     margin:0;
     background:var(--bg);
