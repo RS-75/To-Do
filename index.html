@@ -426,32 +426,55 @@
   }
 
   /* Ajouter tab */
-  .g-status{
+  .account-card{
     display:flex;
+    flex-direction:column;
     align-items:center;
-    justify-content:space-between;
-    background:var(--card);
+    text-align:center;
+    background:#FFFFFF;
     border:1px solid var(--line);
-    border-radius:10px;
-    padding:10px 12px;
-    font-size:13px;
-    color:var(--ink-soft);
+    border-radius:16px;
+    padding:32px 20px 26px;
+    margin-top:10px;
     margin-bottom:18px;
   }
-  .g-status button{
-    background:var(--ink);
-    color:var(--card);
-    border:none;
-    border-radius:7px;
-    padding:6px 12px;
-    font-size:12.5px;
-    font-weight:600;
-    cursor:pointer;
+  .g-avatar{
+    width:84px;height:84px;
+    border-radius:50%;
+    object-fit:cover;
+    background:var(--card-soft);
+    border:1px solid var(--line);
   }
-  .g-status.connected button{
+  .g-avatar-placeholder{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:30px;
+    color:var(--ink-faint);
+    font-family:'Fraunces',serif;
+  }
+  .g-name{
+    font-family:'Fraunces',serif;
+    font-size:18px;
+    font-weight:500;
+    margin-top:14px;
+  }
+  .g-email{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  #gAccountBtn.connected{
     background:transparent;
     color:var(--rust);
     border:1px solid var(--line);
+  }
+  .account-note{
+    font-size:12px;
+    color:var(--ink-soft);
+    line-height:1.5;
+    text-align:center;
+    padding:0 8px;
   }
   .meet-toggle{
     display:flex;
@@ -719,11 +742,6 @@
   <section class="panel" id="panel-add">
     <div class="add-panel-title">Nouvelle tâche</div>
 
-    <div class="g-status" id="gStatus">
-      <span id="gStatusText">Google non connecté</span>
-      <button type="button" id="gConnectBtn">Se connecter</button>
-    </div>
-
     <form id="addForm">
       <div class="field-label">Tâche</div>
       <input type="text" id="taskInput" placeholder="Que faut-il faire ?" autocomplete="off">
@@ -737,7 +755,7 @@
       <div id="meetFields" style="display:none;">
         <div class="field-label">Email de l'invité</div>
         <input type="email" id="meetEmailInput" placeholder="prenom@exemple.com" autocomplete="off">
-        <div class="meet-hint">Nécessite un rappel avec date et heure. L'invitation est envoyée automatiquement par Google.</div>
+        <div class="meet-hint">Nécessite un rappel avec date et heure. L'invitation est envoyée automatiquement par Google. (Statut de connexion visible dans l'onglet Compte.)</div>
       </div>
 
       <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Ajouter</button>
@@ -749,6 +767,20 @@
   <!-- FAIT -->
   <section class="panel" id="panel-done">
     <div id="doneWrap"></div>
+  </section>
+
+  <!-- COMPTE -->
+  <section class="panel" id="panel-account">
+    <div class="account-card">
+      <img id="gAvatar" class="g-avatar" src="" alt="" style="display:none;">
+      <div id="gAvatarPlaceholder" class="g-avatar g-avatar-placeholder">?</div>
+      <div class="g-name" id="gName">Non connecté</div>
+      <div class="g-email" id="gEmail"></div>
+      <button type="button" class="btn btn-primary" id="gAccountBtn" style="margin-top:16px;">Se connecter à Google</button>
+    </div>
+    <div class="account-note">
+      Ce compte sert uniquement à créer des événements dans ton calendrier Google (avec lien Meet) et à afficher ton nom, ton email et ta photo ici. L'appli n'a pas accès à tes messages ni à tes contacts.
+    </div>
   </section>
 
 </div>
@@ -793,6 +825,10 @@
     <svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>
     <span>Fait</span>
   </button>
+  <button class="tab-btn" data-tab="account" style="position:relative;">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
+    <span>Compte</span>
+  </button>
 </nav>
 
 <script>
@@ -832,9 +868,11 @@ const doneWrap = document.getElementById('doneWrap');
 const ringProgress = document.getElementById('ringProgress');
 const ringNum = document.getElementById('ringNum');
 
-const gStatus = document.getElementById('gStatus');
-const gStatusText = document.getElementById('gStatusText');
-const gConnectBtn = document.getElementById('gConnectBtn');
+const gAvatar = document.getElementById('gAvatar');
+const gAvatarPlaceholder = document.getElementById('gAvatarPlaceholder');
+const gName = document.getElementById('gName');
+const gEmail = document.getElementById('gEmail');
+const gAccountBtn = document.getElementById('gAccountBtn');
 const meetCheckbox = document.getElementById('meetCheckbox');
 const meetFields = document.getElementById('meetFields');
 const meetEmailInput = document.getElementById('meetEmailInput');
@@ -861,7 +899,7 @@ const qaDateInput = document.getElementById('qaDateInput');
 const qaSubmitBtn = document.getElementById('qaSubmitBtn');
 const qaCancelBtn = document.getElementById('qaCancelBtn');
 
-const TAB_TITLES = { today: "Aujourd'hui", upcoming: 'À venir', add: 'Ajouter', done: 'Fait' };
+const TAB_TITLES = { today: "Aujourd'hui", upcoming: 'À venir', add: 'Ajouter', done: 'Fait', account: 'Compte' };
 
 function uid(){ return 't' + Date.now() + Math.random().toString(36).slice(2,8); }
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
@@ -1368,24 +1406,63 @@ qaForm.addEventListener('submit', async (e)=>{
   closeQuickAdd();
 });
 
-/* ---------- Google Calendar / Meet ---------- */
+/* ---------- Google Calendar / Meet / Compte ---------- */
 const GOOGLE_CLIENT_ID = '673642934274-0oc0fkun3n74fp4i1agdnic2rcscp8sr.apps.googleusercontent.com';
-const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
+const PROFILE_KEY = 'google_profile_v1';
 
 let gTokenClient = null;
 let gAccessToken = null;
 let gTokenExpiry = 0;
+let gSilentRefreshTimer = null;
 
-function updateGoogleStatusUI(connected){
-  if(connected){
-    gStatusText.textContent = 'Google connecté ✓';
-    gConnectBtn.textContent = 'Déconnecter';
-    gStatus.classList.add('connected');
+function loadCachedProfile(){
+  try{
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function saveCachedProfile(profile){
+  try{ localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); }catch(e){}
+}
+function clearCachedProfile(){
+  try{ localStorage.removeItem(PROFILE_KEY); }catch(e){}
+}
+
+function renderAccountUI(connected, profile){
+  if(connected && profile){
+    gName.textContent = profile.name || 'Connecté';
+    gEmail.textContent = profile.email || '';
+    if(profile.picture){
+      gAvatar.src = profile.picture;
+      gAvatar.style.display = 'block';
+      gAvatarPlaceholder.style.display = 'none';
+    } else {
+      gAvatar.style.display = 'none';
+      gAvatarPlaceholder.style.display = 'flex';
+    }
+    gAccountBtn.textContent = 'Se déconnecter';
+    gAccountBtn.classList.add('connected');
   } else {
-    gStatusText.textContent = 'Google non connecté';
-    gConnectBtn.textContent = 'Se connecter';
-    gStatus.classList.remove('connected');
+    gName.textContent = 'Non connecté';
+    gEmail.textContent = '';
+    gAvatar.style.display = 'none';
+    gAvatarPlaceholder.style.display = 'flex';
+    gAccountBtn.textContent = 'Se connecter à Google';
+    gAccountBtn.classList.remove('connected');
   }
+}
+
+async function fetchAndStoreProfile(token){
+  const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if(!res.ok) throw new Error('Profil Google indisponible');
+  const data = await res.json();
+  const profile = { name: data.name, email: data.email, picture: data.picture };
+  saveCachedProfile(profile);
+  renderAccountUI(true, profile);
+  return profile;
 }
 
 function initGoogleAuth(){
@@ -1398,7 +1475,31 @@ function initGoogleAuth(){
     scope: GOOGLE_SCOPE,
     callback: ()=>{}
   });
-  updateGoogleStatusUI(!!(gAccessToken && Date.now() < gTokenExpiry));
+
+  // Show cached profile immediately (feels "always connected"), then try a silent refresh in the background
+  const cached = loadCachedProfile();
+  if(cached && localStorage.getItem('google_was_connected')){
+    renderAccountUI(true, cached);
+    requestGoogleToken(false).then(token => {
+      fetchAndStoreProfile(token).catch(()=>{});
+    }).catch(()=>{
+      // silent refresh failed (session expired / cookies blocked) — keep showing cached info,
+      // but the account button will re-trigger a real login if they tap it
+    });
+  } else {
+    renderAccountUI(false, null);
+  }
+  scheduleSilentRefresh();
+}
+
+function scheduleSilentRefresh(){
+  if(gSilentRefreshTimer) clearInterval(gSilentRefreshTimer);
+  // proactively refresh the token before it expires, silently, so it's rarely needed on demand
+  gSilentRefreshTimer = setInterval(()=>{
+    if(localStorage.getItem('google_was_connected') && Date.now() > gTokenExpiry - 5*60000){
+      requestGoogleToken(false).catch(()=>{});
+    }
+  }, 4 * 60000);
 }
 
 function requestGoogleToken(interactive){
@@ -1409,7 +1510,6 @@ function requestGoogleToken(interactive){
       gAccessToken = resp.access_token;
       gTokenExpiry = Date.now() + (resp.expires_in * 1000) - 60000;
       localStorage.setItem('google_was_connected', '1');
-      updateGoogleStatusUI(true);
       resolve(gAccessToken);
     };
     try{
@@ -1434,16 +1534,18 @@ function disconnectGoogle(){
   gAccessToken = null;
   gTokenExpiry = 0;
   localStorage.removeItem('google_was_connected');
-  updateGoogleStatusUI(false);
+  clearCachedProfile();
+  renderAccountUI(false, null);
 }
 
-gConnectBtn.addEventListener('click', async ()=>{
+gAccountBtn.addEventListener('click', async ()=>{
   if(gAccessToken && Date.now() < gTokenExpiry){
     disconnectGoogle();
     return;
   }
   try{
-    await requestGoogleToken(true);
+    const token = await requestGoogleToken(true);
+    await fetchAndStoreProfile(token);
   }catch(e){
     console.error(e);
   }
