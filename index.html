@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Journée">
 <meta name="theme-color" content="#ECE3D0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,6 +31,8 @@
     --sage-soft:#DEE3CD;
     --rust:#A5573F;
     --rust-soft:#EAD2C7;
+    --gcal:#5B7FA6;
+    --gcal-soft:#E9EEF3;
   }
   *{box-sizing:border-box;}
   html, body{
@@ -469,6 +474,63 @@
     color:var(--rust);
     border:1px solid var(--line);
   }
+  .sync-toggle-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:13px;
+    color:var(--ink);
+    margin-top:18px;
+    padding-top:16px;
+    border-top:1px solid var(--line);
+    cursor:pointer;
+  }
+  .sync-toggle-row input{ width:18px;height:18px;accent-color:var(--accent); flex:0 0 auto; }
+
+  .gcal-toggle-row{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:-6px 0 18px;
+    cursor:pointer;
+  }
+  .gcal-toggle-row input{ width:16px;height:16px;accent-color:var(--gcal); flex:0 0 auto; }
+
+  .timeline.has-gcal .task-card{ right:calc(50% + 2px); padding:7px 8px; }
+  .timeline.has-gcal .task-del{ display:none; }
+  .gcal-card{
+    position:absolute;
+    left:calc(50% + 2px);
+    right:10px;
+    background:var(--gcal-soft);
+    border:1px solid var(--gcal);
+    border-left:3px solid var(--gcal);
+    border-radius:10px;
+    padding:7px 10px;
+    font-size:13px;
+    line-height:1.25;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    text-decoration:none;
+    color:var(--ink);
+  }
+  .gcal-tag{
+    font-size:9.5px;
+    font-weight:700;
+    color:#fff;
+    background:var(--gcal);
+    border-radius:5px;
+    padding:1px 5px;
+    flex:0 0 auto;
+  }
+  .gcal-card .g-title{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .gcal-card .g-time{ font-size:10.5px; color:var(--ink-soft); flex:0 0 auto; }
+
+  .dot-google{ width:4px;height:4px;border-radius:50%;background:var(--gcal); }
+
   .account-note{
     font-size:12px;
     color:var(--ink-soft);
@@ -761,8 +823,8 @@
   </header>
 
   <div class="notif-hint" id="notifHint" style="display:none;">
-    Active les notifications pour tes rappels.
-    <button id="notifBtn">Activer</button>
+    Connecte-toi à Google pour des rappels fiables, même appli fermée.
+    <button id="notifBtn">Connecter</button>
   </div>
 
   <!-- AUJOURD'HUI -->
@@ -772,6 +834,11 @@
       <button class="view-btn" data-view="month">Mois</button>
       <button class="view-btn" data-view="year">Année</button>
     </div>
+
+    <label class="gcal-toggle-row">
+      <input type="checkbox" id="showGoogleCheckbox">
+      <span>Afficher mon agenda Google</span>
+    </label>
 
     <div class="view-content" id="view-day">
       <div class="week-strip" id="weekStrip"></div>
@@ -826,6 +893,11 @@
     <div class="account-note">
       Ce compte sert uniquement à créer des événements dans ton calendrier Google (avec lien Meet) et à afficher ton nom, ton email et ta photo ici. L'appli n'a pas accès à tes messages ni à tes contacts.
     </div>
+
+    <label class="sync-toggle-row">
+      <input type="checkbox" id="autoSyncCheckbox">
+      <span>Synchroniser automatiquement mes tâches datées avec Google Calendar</span>
+    </label>
   </section>
 
 </div>
@@ -907,6 +979,13 @@ function startOfDay(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
 let selectedDate = startOfDay(new Date());
 let weekAnchor = new Date(selectedDate);
 
+let autoSyncEnabled = localStorage.getItem('auto_sync_enabled') !== '0'; // par défaut activé
+let showGoogleCal = localStorage.getItem('show_google_cal') === '1';
+let dayGoogleEvents = [];
+let monthGoogleDots = new Set();
+let lastDayFetchKey = null;
+let lastMonthFetchKey = null;
+
 let viewMode = 'day'; // 'day' | 'month' | 'year'
 let monthAnchor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
 let yearAnchor = selectedDate.getFullYear();
@@ -936,6 +1015,8 @@ const gAvatarPlaceholder = document.getElementById('gAvatarPlaceholder');
 const gName = document.getElementById('gName');
 const gEmail = document.getElementById('gEmail');
 const gAccountBtn = document.getElementById('gAccountBtn');
+const autoSyncCheckbox = document.getElementById('autoSyncCheckbox');
+const showGoogleCheckbox = document.getElementById('showGoogleCheckbox');
 const qaMeetCheckbox = document.getElementById('qaMeetCheckbox');
 const qaMeetFields = document.getElementById('qaMeetFields');
 const qaMeetEmailInput = document.getElementById('qaMeetEmailInput');
@@ -1035,6 +1116,84 @@ function buildTimelineGrid(){
   timelineEl.innerHTML = html;
 }
 
+function localDateKey(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+async function fetchGoogleEventsRange(timeMinIso, timeMaxIso){
+  const token = await ensureGoogleToken();
+  const params = new URLSearchParams({
+    timeMin: timeMinIso,
+    timeMax: timeMaxIso,
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '100'
+  });
+  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?' + params.toString(), {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if(!res.ok) throw new Error('Lecture Google Calendar impossible (' + res.status + ')');
+  const data = await res.json();
+  return (data.items || [])
+    .filter(e => e.start && e.start.dateTime && e.status !== 'cancelled')
+    .map(e => ({
+      id: e.id,
+      title: e.summary || '(sans titre)',
+      start: e.start.dateTime,
+      end: e.end && e.end.dateTime,
+      htmlLink: e.htmlLink
+    }));
+}
+
+async function ensureDayGoogleEvents(){
+  if(!showGoogleCal || !localStorage.getItem('google_was_connected')){
+    if(dayGoogleEvents.length){ dayGoogleEvents = []; renderTimeline(); }
+    lastDayFetchKey = null;
+    return;
+  }
+  const key = localDateKey(selectedDate);
+  if(key === lastDayFetchKey) return;
+  lastDayFetchKey = key;
+  try{
+    const dayStart = new Date(selectedDate); dayStart.setHours(0,0,0,0);
+    const dayEnd = new Date(selectedDate); dayEnd.setHours(23,59,59,999);
+    dayGoogleEvents = await fetchGoogleEventsRange(dayStart.toISOString(), dayEnd.toISOString());
+  }catch(e){
+    console.error(e);
+    dayGoogleEvents = [];
+    lastDayFetchKey = null;
+  }
+  renderTimeline();
+}
+
+async function ensureMonthGoogleDots(){
+  if(!showGoogleCal || !localStorage.getItem('google_was_connected')){
+    if(monthGoogleDots.size){ monthGoogleDots = new Set(); renderMonthGrid(); }
+    lastMonthFetchKey = null;
+    return;
+  }
+  const key = monthAnchor.getFullYear() + '-' + monthAnchor.getMonth();
+  if(key === lastMonthFetchKey) return;
+  lastMonthFetchKey = key;
+  try{
+    const y = monthAnchor.getFullYear(), m = monthAnchor.getMonth();
+    const rangeStart = new Date(y, m, 1); rangeStart.setDate(rangeStart.getDate() - 7);
+    const rangeEnd = new Date(y, m + 1, 0); rangeEnd.setDate(rangeEnd.getDate() + 7); rangeEnd.setHours(23,59,59,999);
+    const events = await fetchGoogleEventsRange(rangeStart.toISOString(), rangeEnd.toISOString());
+    const set = new Set();
+    events.forEach(e => set.add(localDateKey(new Date(e.start))));
+    monthGoogleDots = set;
+  }catch(e){
+    console.error(e);
+    monthGoogleDots = new Set();
+    lastMonthFetchKey = null;
+  }
+  renderMonthGrid();
+}
+
 function renderAll(){
   renderWeekStrip();
   renderRing();
@@ -1044,6 +1203,8 @@ function renderAll(){
   renderDone();
   renderMonthGrid();
   renderYearGrid();
+  ensureDayGoogleEvents();
+  ensureMonthGoogleDots();
 }
 
 function switchView(view){
@@ -1082,10 +1243,14 @@ function renderMonthGrid(){
     const isSelected = d.getTime() === selectedDate.getTime();
     const isPast = d.getTime() < today.getTime() && !isToday;
     const hasTasks = tasks.some(t => t.due && isSameDay(new Date(t.due), d));
+    const hasGoogle = showGoogleCal && monthGoogleDots.has(localDateKey(d));
     html += `
       <button class="month-cell ${outside?'outside':''} ${isToday?'today':''} ${isSelected?'selected':''} ${isPast?'past':''}" data-date="${d.getTime()}">
         <div class="num">${d.getDate()}</div>
-        <div class="dot-indicator ${hasTasks?'':'empty'}"></div>
+        <div style="display:flex;gap:3px;height:4px;">
+          <div class="dot-indicator ${hasTasks?'':'empty'}"></div>
+          ${hasGoogle ? '<div class="dot-google"></div>' : ''}
+        </div>
       </button>
     `;
   }
@@ -1200,6 +1365,28 @@ function renderTimeline(){
         <div class="task-time">${fmtTime(t.due)}${late?' · en retard':''}${t.meetLink ? ` · <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥 Meet</a>` : ''}</div>
       </div>
       <button class="task-del" data-action="delete" data-id="${t.id}">×</button>
+    `;
+    lane.appendChild(card);
+  });
+
+  const gEvents = (showGoogleCal && localStorage.getItem('google_was_connected')) ? dayGoogleEvents : [];
+  timelineEl.classList.toggle('has-gcal', gEvents.length > 0);
+  gEvents.forEach(ev => {
+    const d = new Date(ev.start);
+    const hour = Math.min(Math.max(d.getHours(), START_HOUR), END_HOUR);
+    const lane = laneByHour[hour];
+    if(!lane) return;
+    const minuteOffset = d.getHours() < START_HOUR ? 0 : (d.getHours() > END_HOUR ? 0 : d.getMinutes());
+    const card = document.createElement('a');
+    card.className = 'gcal-card';
+    card.style.top = minuteOffset + 'px';
+    card.href = ev.htmlLink || '#';
+    card.target = '_blank';
+    card.rel = 'noopener';
+    card.innerHTML = `
+      <span class="gcal-tag">G</span>
+      <span class="g-title">${escapeHtml(ev.title)}</span>
+      <span class="g-time">${fmtTime(ev.start)}</span>
     `;
     lane.appendChild(card);
   });
@@ -1329,11 +1516,13 @@ document.addEventListener('click', async (e)=>{
       t.done = !t.done;
       renderAll();
       await saveTask(t);
+      if(t.done) cancelReminder(t);
+      else if(t.due && !t.gcalEventId) syncTaskReminder(t);
     } else if(action === 'delete'){
       tasks = tasks.filter(x=>x.id!==id);
       renderAll();
       await deleteTaskStorage(id);
-      if(t.gcalEventId) deleteGoogleEvent(t.gcalEventId);
+      cancelReminder(t);
     }
     return;
   }
@@ -1396,6 +1585,8 @@ detailCheck.addEventListener('click', async ()=>{
   await saveTask(t);
   detailTitle.classList.toggle('done', t.done);
   detailCheck.classList.toggle('done', t.done);
+  if(t.done) cancelReminder(t);
+  else if(t.due && !t.gcalEventId) syncTaskReminder(t);
 });
 detailDeleteBtn.addEventListener('click', async ()=>{
   const t = tasks.find(x => x.id === detailTaskId);
@@ -1403,7 +1594,7 @@ detailDeleteBtn.addEventListener('click', async ()=>{
   tasks = tasks.filter(x => x.id !== detailTaskId);
   renderAll();
   await deleteTaskStorage(detailTaskId);
-  if(t.gcalEventId) deleteGoogleEvent(t.gcalEventId);
+  cancelReminder(t);
   closeTaskDetail();
 });
 
@@ -1462,6 +1653,7 @@ qaForm.addEventListener('submit', async (e)=>{
   tasks.push(t);
   renderAll();
   await saveTask(t);
+  if(t.due && !wantsMeet) syncTaskReminder(t);
 
   if(wantsMeet){
     qaSubmitBtn.disabled = true;
@@ -1570,6 +1762,10 @@ function initGoogleAuth(){
     renderAccountUI(false, null);
   }
   scheduleSilentRefresh();
+  lastDayFetchKey = null;
+  lastMonthFetchKey = null;
+  ensureDayGoogleEvents();
+  ensureMonthGoogleDots();
 }
 
 function scheduleSilentRefresh(){
@@ -1688,35 +1884,100 @@ qaMeetCheckbox.addEventListener('change', ()=>{
   qaMeetError.style.display = 'none';
 });
 
-/* ---------- notifications ---------- */
-function setupNotifPrompt(){
-  if(!('Notification' in window)) return;
-  if(Notification.permission === 'default'){ notifHint.style.display='flex'; }
-}
-notifBtn && notifBtn.addEventListener('click', async ()=>{
-  try{
-    const perm = await Notification.requestPermission();
-    if(perm==='granted') notifHint.style.display='none';
-  }catch(e){}
-});
-function checkReminders(){
-  if(!('Notification' in window) || Notification.permission !== 'granted') return;
-  const now = Date.now();
-  for(const t of tasks){
-    if(t.done || !t.due || notifiedIds.has(t.id)) continue;
-    if(new Date(t.due).getTime() <= now){
-      try{ new Notification('Rappel', { body: t.text }); }catch(e){}
-      notifiedIds.add(t.id);
+/* ---------- rappels fiables via Google Calendar (fonctionne appli fermée) ---------- */
+// Chaque tâche datée est synchronisée comme événement Google Calendar (avec ou sans Meet).
+// Comme ton compte Google est relié au Calendrier iPhone, les notifications système
+// se déclenchent normalement, même appli fermée — sans avoir besoin d'un serveur séparé.
+
+async function createPlainCalendarEvent(taskText, dueIso, requestId){
+  const token = await ensureGoogleToken();
+  const start = new Date(dueIso);
+  const end = new Date(start.getTime() + 30 * 60000);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const body = {
+    summary: taskText,
+    start: { dateTime: start.toISOString(), timeZone: tz },
+    end: { dateTime: end.toISOString(), timeZone: tz },
+    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 0 }] }
+  };
+
+  const res = await fetch(
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+    {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     }
+  );
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    throw new Error((err.error && err.error.message) || 'Erreur Google Calendar (' + res.status + ')');
+  }
+  const data = await res.json();
+  return { gcalEventId: data.id };
+}
+
+async function syncTaskReminder(task){
+  if(!task.due) return;
+  if(!autoSyncEnabled) return; // synchro désactivée par l'utilisateur
+  if(!localStorage.getItem('google_was_connected')) return; // pas connecté : on ne force rien
+  try{
+    const result = await createPlainCalendarEvent(task.text, task.due, task.id);
+    task.gcalEventId = result.gcalEventId;
+    await saveTask(task);
+    renderAll();
+  }catch(e){
+    console.error('Synchronisation du rappel échouée', e);
+  }
+}
+async function cancelReminder(task){
+  if(task && task.gcalEventId){
+    await deleteGoogleEvent(task.gcalEventId);
+    task.gcalEventId = null;
+    await saveTask(task);
   }
 }
 
-setInterval(()=>{ checkReminders(); renderAll(); }, 30000);
+autoSyncCheckbox.checked = autoSyncEnabled;
+autoSyncCheckbox.addEventListener('change', ()=>{
+  autoSyncEnabled = autoSyncCheckbox.checked;
+  localStorage.setItem('auto_sync_enabled', autoSyncEnabled ? '1' : '0');
+});
+
+showGoogleCheckbox.checked = showGoogleCal;
+showGoogleCheckbox.addEventListener('change', async ()=>{
+  showGoogleCal = showGoogleCheckbox.checked;
+  localStorage.setItem('show_google_cal', showGoogleCal ? '1' : '0');
+  lastDayFetchKey = null;
+  lastMonthFetchKey = null;
+  if(showGoogleCal && !localStorage.getItem('google_was_connected')){
+    // il faut d'abord se connecter : on connecte puis on affiche
+    try{
+      const token = await requestGoogleToken(true);
+      await fetchAndStoreProfile(token);
+    }catch(e){
+      console.error(e);
+      showGoogleCal = false;
+      showGoogleCheckbox.checked = false;
+      localStorage.setItem('show_google_cal', '0');
+    }
+  }
+  renderAll();
+});
+
+function setupNotifPrompt(){
+  if(!localStorage.getItem('google_was_connected')){
+    notifHint.style.display = 'flex';
+  }
+}
+notifBtn && notifBtn.addEventListener('click', ()=> switchTab('account'));
 
 loadTasks();
 updateTodayHeader();
 initGoogleAuth();
 setupNotifPrompt();
+setInterval(()=>{ renderAll(); }, 60000);
 quickFab.classList.add('show');
 setTimeout(scrollToNow, 200);
 </script>
