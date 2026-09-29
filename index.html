@@ -111,6 +111,22 @@
     color: #fff;
   }
 
+  /* ÉCRAN DE CHARGEMENT (SPLASH SCREEN) */
+  #splashScreen {
+    position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+  }
+  #splashScreen.hide { opacity: 0; visibility: hidden; }
+  .splash-logo {
+    font-family: 'Fraunces', serif; font-size: 42px; font-weight: 500; color: var(--ink);
+    letter-spacing: -0.5px; animation: pulseLogo 1.5s infinite alternate;
+  }
+  @keyframes pulseLogo {
+    0% { transform: scale(1); opacity: 0.85; }
+    100% { transform: scale(1.05); opacity: 1; }
+  }
+
   *{box-sizing:border-box;}
   html, body{ touch-action:manipulation; }
   body{
@@ -244,7 +260,6 @@
 
   .empty-note{ color:var(--ink-faint); font-size:13px; text-align:center; padding:40px 10px; }
 
-  /* STATS BOX */
   .stats-card{
     background: var(--card); border: 1px solid var(--line); border-radius: 16px;
     padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;
@@ -352,6 +367,12 @@
 </style>
 </head>
 <body>
+
+  <!-- ÉCRAN DE CHARGEMENT (SPLASH SCREEN) -->
+  <div id="splashScreen">
+    <div class="splash-logo">Journée</div>
+  </div>
+
 <div class="wrap">
 
   <header>
@@ -612,6 +633,16 @@
 </nav>
 
 <script>
+/* Gestion de l'écran de chargement au démarrage */
+window.addEventListener('load', () => {
+  const splash = document.getElementById('splashScreen');
+  if(splash) {
+    setTimeout(() => {
+      splash.classList.add('hide');
+    }, 400); // Petit délai fluide de 400ms
+  }
+});
+
 const themeSelect = document.getElementById('themeSelect');
 let currentTheme = localStorage.getItem('theme_pref') || 'auto';
 if(themeSelect) themeSelect.value = currentTheme;
@@ -860,7 +891,6 @@ function persistAll(){
 async function saveTask(t){ persistAll(); }
 async function deleteTaskStorage(id){ persistAll(); }
 
-/* Vérifie et régénère les tâches récurrentes si besoin */
 function checkRecurringTasks() {
   const now = new Date();
   let updated = false;
@@ -868,12 +898,10 @@ function checkRecurringTasks() {
     if(t.repeat && t.repeat !== 'none' && t.done && t.due) {
       const dueDate = new Date(t.due);
       if(dueDate < now) {
-        // Crée la prochaine occurrence
         const nextDue = new Date(dueDate);
         if(t.repeat === 'daily') nextDue.setDate(nextDue.getDate() + 1);
         if(t.repeat === 'weekly') nextDue.setDate(nextDue.getDate() + 7);
         
-        // Vérifie si la prochaine occurrence n'existe pas déjà
         const exists = tasks.some(x => x.text === t.text && new Date(x.due).getTime() === nextDue.getTime());
         if(!exists) {
           tasks.push({
@@ -897,7 +925,6 @@ function checkRecurringTasks() {
   if(updated) persistAll();
 }
 
-/* ---------- tabs ---------- */
 function updateTodayHeader(){
   if(viewMode === 'month'){
     pageTitle.textContent = 'Mois';
@@ -934,7 +961,6 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
 });
 
-/* ---------- grid / timeline ---------- */
 function buildTimelineGrid(){
   let html = '';
   for(let h=START_HOUR; h<=END_HOUR; h++){
@@ -1239,7 +1265,6 @@ function renderTimeline(){
   }
 }
 
-/* ---------- Drag and Drop Logic ---------- */
 function initDragAndDrop() {
   const chips = document.querySelectorAll('.chip[draggable="true"]');
   chips.forEach(chip => {
