@@ -910,6 +910,16 @@
       <input type="checkbox" id="autoSyncCheckbox">
       <span>Synchroniser automatiquement mes tâches datées avec Google Calendar</span>
     </label>
+
+    <div class="account-card" style="margin-top: 20px; align-items: stretch; text-align: left; padding: 20px;">
+      <div class="section-title" style="margin-bottom: 12px; margin-left: 0;">Contacts rapides (Visio)</div>
+      <form id="contactForm" style="display:flex; gap:8px; margin-bottom: 16px;">
+        <input type="text" id="contactName" placeholder="Nom" required style="margin-bottom:0; flex:1; padding: 8px 10px; font-size:13px;">
+        <input type="email" id="contactEmail" placeholder="Email" required style="margin-bottom:0; flex:1.5; padding: 8px 10px; font-size:13px;">
+        <button type="submit" class="btn btn-primary" style="padding: 8px 12px; width:auto;">+</button>
+      </form>
+      <div id="contactListWrap"></div>
+    </div>
   </section>
 
 </div>
@@ -936,7 +946,8 @@
       <span>Visioconférence Google Meet</span>
     </label>
     <div id="qaMeetFields" style="display:none;">
-      <input type="email" id="qaMeetEmailInput" placeholder="Email de l'invité" autocomplete="off">
+      <input type="email" id="qaMeetEmailInput" list="contactsDatalist" placeholder="Email de l'invité" autocomplete="off">
+      <datalist id="contactsDatalist"></datalist>
     </div>
     <div class="meet-error" id="qaMeetError" style="display:none;"></div>
     <div class="qa-actions">
@@ -1070,6 +1081,71 @@ const qaSubmitBtn = document.getElementById('qaSubmitBtn');
 const qaCancelBtn = document.getElementById('qaCancelBtn');
 
 const TAB_TITLES = { today: "Aujourd'hui", upcoming: 'À venir', done: 'Fait', account: 'Compte' };
+
+const CONTACTS_KEY = 'journee_contacts_v1';
+let contacts = [];
+
+function loadContacts() {
+  try {
+    const raw = localStorage.getItem(CONTACTS_KEY);
+    contacts = raw ? JSON.parse(raw) : [];
+  } catch(e) { contacts = []; }
+  renderContacts();
+}
+
+function saveContacts() {
+  localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+  renderContacts();
+}
+
+function renderContacts() {
+  // Met à jour les suggestions du formulaire
+  const datalist = document.getElementById('contactsDatalist');
+  if(datalist) {
+    datalist.innerHTML = contacts.map(c => `<option value="${c.email}">${escapeHtml(c.name)}</option>`).join('');
+  }
+
+  // Met à jour la liste dans l'onglet Compte
+  const wrap = document.getElementById('contactListWrap');
+  if(!wrap) return;
+  if(contacts.length === 0) {
+    wrap.innerHTML = '<div class="empty-note" style="padding: 10px 0;">Aucun contact enregistré.</div>';
+    return;
+  }
+  wrap.innerHTML = '<ul class="agenda-list" style="margin:0; padding:0;">' + contacts.map(c => `
+    <li class="agenda-item" style="padding: 8px 0; border-bottom: 1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
+      <div class="txt" style="font-size:13px; line-height:1.4;">
+        <b style="color:var(--ink);">${escapeHtml(c.name)}</b><br>
+        <span style="color:var(--ink-soft);font-size:11.5px;">${escapeHtml(c.email)}</span>
+      </div>
+      <button type="button" class="del" onclick="deleteContact('${c.email}')" style="font-size:20px; padding:0 5px;">×</button>
+    </li>
+  `).join('') + '</ul>';
+}
+
+window.deleteContact = function(email) {
+  contacts = contacts.filter(c => c.email !== email);
+  saveContacts();
+};
+
+const contactForm = document.getElementById('contactForm');
+if(contactForm) {
+  contactForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('contactName').value.trim();
+    const email = document.getElementById('contactEmail').value.trim();
+    if(name && email) {
+      const existing = contacts.find(c => c.email === email);
+      if(existing) existing.name = name;
+      else contacts.push({name, email});
+      saveContacts();
+      contactForm.reset();
+    }
+  });
+}
+
+// Initialise les contacts au chargement
+loadContacts();
 
 function uid(){ return 't' + Date.now() + Math.random().toString(36).slice(2,8); }
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
@@ -1472,8 +1548,7 @@ function renderDone(){
       ${done.map(t => `
         <li class="agenda-item task-row" data-id="${t.id}">
           <span class="dot" style="background:var(--sage);"></span>
-          <span class="txt done">${escapeHtml(t.text)}</span>
-          ${t.due ? `<span class="when">${fmtDateShort(t.due)}</span>` : ''}
+          <span class="txt done">${escapeHtml(t.text)}</span>${t.due ? `<span class="when">${fmtDateShort(t.due)}</span>` : ''}
           <button class="del" data-action="delete" data-id="${t.id}">×</button>
         </li>
       `).join('')}
