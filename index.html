@@ -55,6 +55,66 @@
     --gcal-soft: #263345;
   }
 
+  /* Mode Liquid Glass */
+  [data-theme="glass"] {
+    --bg: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+    --card: rgba(255, 255, 255, 0.4);
+    --card-soft: rgba(255, 255, 255, 0.2);
+    --ink: #1e1e1e;
+    --ink-soft: #444;
+    --ink-faint: #666;
+    --line: rgba(255, 255, 255, 0.4);
+    --accent: #8A2BE2;
+    --accent-soft: rgba(138, 43, 226, 0.3);
+    --sage: #2ecc71;
+    --sage-soft: rgba(46, 204, 113, 0.3);
+    --rust: #e74c3c;
+    --rust-soft: rgba(231, 76, 60, 0.3);
+    --gcal: #3498db;
+    --gcal-soft: rgba(52, 152, 219, 0.3);
+  }
+  [data-theme="glass"] body {
+    background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+    background-attachment: fixed;
+  }
+  [data-theme="glass"] .view-switch,
+  [data-theme="glass"] .month-grid,
+  [data-theme="glass"] .month-tile,
+  [data-theme="glass"] .chip,
+  [data-theme="glass"] .timeline-outer,
+  [data-theme="glass"] .task-card,
+  [data-theme="glass"] .account-card,
+  [data-theme="glass"] .modern-toggle,
+  [data-theme="glass"] input[type=text],
+  [data-theme="glass"] input[type=email],
+  [data-theme="glass"] input[type=datetime-local],
+  [data-theme="glass"] select,
+  [data-theme="glass"] textarea,
+  [data-theme="glass"] .qa-sheet,
+  [data-theme="glass"] .tabbar,
+  [data-theme="glass"] .quick-fab {
+    background: var(--card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  }
+  [data-theme="glass"] .view-btn.active {
+    background: rgba(255,255,255,0.6);
+  }
+  [data-theme="glass"] .btn-primary {
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--ink);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+  [data-theme="glass"] .month-cell.today .num,
+  [data-theme="glass"] .week-day.today .num {
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+  }
+
   *{box-sizing:border-box;}
   html, body{
     touch-action:manipulation;
@@ -909,6 +969,7 @@
       <option value="auto">Automatique</option>
       <option value="light">Clair</option>
       <option value="dark">Sombre</option>
+      <option value="glass">Liquid Glass</option>
     </select>
   </label>
 
@@ -1024,7 +1085,9 @@ let currentTheme = localStorage.getItem('theme_pref') || 'auto';
 if(themeSelect) themeSelect.value = currentTheme;
 
 function applyTheme(theme) {
-  if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+  if (theme === 'glass') {
+    document.documentElement.setAttribute('data-theme', 'glass');
+  } else if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     document.documentElement.setAttribute('data-theme', 'dark');
   } else {
     document.documentElement.removeAttribute('data-theme');
