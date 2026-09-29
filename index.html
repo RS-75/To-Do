@@ -13,6 +13,7 @@
 <meta http-equiv="Expires" content="0">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -752,7 +753,18 @@
     margin-bottom:10px;
     resize:vertical;
   }
-  .qa-sheet input[type=datetime-local]{margin-bottom:0;}
+  .qa-sheet input[type=datetime-local]{margin-bottom:10px;}
+  .qa-sheet select{
+    width:100%;
+    border:1px solid var(--line);
+    background:var(--card);
+    border-radius:10px;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    color:var(--ink);
+    padding:10px 12px;
+    margin-bottom:0;
+  }
   .qa-actions{
     display:flex;
     gap:10px;
@@ -823,8 +835,8 @@
   </header>
 
   <div class="notif-hint" id="notifHint" style="display:none;">
-    Connecte-toi à Google pour des rappels fiables, même appli fermée.
-    <button id="notifBtn">Connecter</button>
+    Active les notifications pour des rappels même appli fermée.
+    <button id="notifBtn">Activer</button>
   </div>
 
   <!-- AUJOURD'HUI -->
@@ -911,6 +923,14 @@
     <input type="text" id="qaTaskInput" placeholder="Que faut-il faire ?" autocomplete="off">
     <textarea id="qaDescInput" placeholder="Description (optionnel)" rows="2"></textarea>
     <input type="datetime-local" id="qaDateInput">
+    <select id="qaRemindSelect">
+      <option value="0">Rappel à l'heure</option>
+      <option value="5">5 min avant</option>
+      <option value="15">15 min avant</option>
+      <option value="30">30 min avant</option>
+      <option value="60">1 h avant</option>
+      <option value="1440">1 jour avant</option>
+    </select>
     <label class="meet-toggle">
       <input type="checkbox" id="qaMeetCheckbox">
       <span>Visioconférence Google Meet</span>
@@ -1045,6 +1065,7 @@ const qaSheet = document.getElementById('qaSheet');
 const qaForm = document.getElementById('qaForm');
 const qaTaskInput = document.getElementById('qaTaskInput');
 const qaDateInput = document.getElementById('qaDateInput');
+const qaRemindSelect = document.getElementById('qaRemindSelect');
 const qaSubmitBtn = document.getElementById('qaSubmitBtn');
 const qaCancelBtn = document.getElementById('qaCancelBtn');
 
@@ -1516,13 +1537,19 @@ document.addEventListener('click', async (e)=>{
       t.done = !t.done;
       renderAll();
       await saveTask(t);
-      if(t.done) cancelReminder(t);
-      else if(t.due && !t.gcalEventId) syncTaskReminder(t);
+      if(t.done){
+        cancelReminder(t);
+        cancelPushReminder(t.id);
+      } else if(t.due && !t.gcalEventId){
+        syncTaskReminder(t);
+        schedulePushReminder(t);
+      }
     } else if(action === 'delete'){
       tasks = tasks.filter(x=>x.id!==id);
       renderAll();
       await deleteTaskStorage(id);
       cancelReminder(t);
+      cancelPushReminder(t.id);
     }
     return;
   }
@@ -1585,8 +1612,13 @@ detailCheck.addEventListener('click', async ()=>{
   await saveTask(t);
   detailTitle.classList.toggle('done', t.done);
   detailCheck.classList.toggle('done', t.done);
-  if(t.done) cancelReminder(t);
-  else if(t.due && !t.gcalEventId) syncTaskReminder(t);
+  if(t.done){
+    cancelReminder(t);
+    cancelPushReminder(t.id);
+  } else if(t.due && !t.gcalEventId){
+    syncTaskReminder(t);
+    schedulePushReminder(t);
+  }
 });
 detailDeleteBtn.addEventListener('click', async ()=>{
   const t = tasks.find(x => x.id === detailTaskId);
@@ -1595,6 +1627,7 @@ detailDeleteBtn.addEventListener('click', async ()=>{
   renderAll();
   await deleteTaskStorage(detailTaskId);
   cancelReminder(t);
+  cancelPushReminder(t.id);
   closeTaskDetail();
 });
 
@@ -1614,6 +1647,7 @@ function closeQuickAdd(){
   qaTaskInput.value = '';
   qaDescInput.value = '';
   qaDateInput.value = '';
+  qaRemindSelect.value = '0';
   qaSubmitBtn.disabled = true;
   qaMeetCheckbox.checked = false;
   qaMeetFields.style.display = 'none';
@@ -1645,6 +1679,7 @@ qaForm.addEventListener('submit', async (e)=>{
     text,
     description: qaDescInput.value.trim() || null,
     due: qaDateInput.value ? new Date(qaDateInput.value).toISOString() : null,
+    remindBefore: parseInt(qaRemindSelect.value, 10) || 0,
     done: false,
     createdAt: Date.now(),
     meetLink: null,
@@ -1654,16 +1689,18 @@ qaForm.addEventListener('submit', async (e)=>{
   renderAll();
   await saveTask(t);
   if(t.due && !wantsMeet) syncTaskReminder(t);
+  if(t.due && !wantsMeet) schedulePushReminder(t);
 
   if(wantsMeet){
     qaSubmitBtn.disabled = true;
     qaSubmitBtn.textContent = 'Création du Meet…';
     try{
-      const result = await createGoogleMeetEvent(t.text, t.due, email, t.id);
+      const result = await createGoogleMeetEvent(t.text, t.due, email, t.id, t.remindBefore);
       t.meetLink = result.meetLink;
       t.gcalEventId = result.gcalEventId;
       await saveTask(t);
       renderAll();
+      schedulePushReminder(t);
       qaSubmitBtn.textContent = 'Ajouter';
       qaSubmitBtn.disabled = false;
     }catch(err){
@@ -1827,7 +1864,7 @@ gAccountBtn.addEventListener('click', async ()=>{
   }
 });
 
-async function createGoogleMeetEvent(taskText, dueIso, attendeeEmail, requestId){
+async function createGoogleMeetEvent(taskText, dueIso, attendeeEmail, requestId, remindBefore){
   const token = await ensureGoogleToken();
   const start = new Date(dueIso);
   const end = new Date(start.getTime() + 30 * 60000);
@@ -1838,6 +1875,7 @@ async function createGoogleMeetEvent(taskText, dueIso, attendeeEmail, requestId)
     start: { dateTime: start.toISOString(), timeZone: tz },
     end: { dateTime: end.toISOString(), timeZone: tz },
     attendees: attendeeEmail ? [{ email: attendeeEmail }] : [],
+    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: remindBefore || 0 }] },
     conferenceData: {
       createRequest: {
         requestId: requestId,
@@ -1884,12 +1922,88 @@ qaMeetCheckbox.addEventListener('change', ()=>{
   qaMeetError.style.display = 'none';
 });
 
+/* ---------- notifications push (fonctionnent même appli fermée) ---------- */
+const PUSH_SERVER_URL = 'https://REMPLACE-CETTE-URL.workers.dev'; // ← ton URL Worker déployée
+const VAPID_PUBLIC_KEY = 'BMEqhY7SbfuzUK_EXB66RHz9BlDuihZylx9wKS48sfnV0cRoSq3PnQsyHHFWifrhcnRdu5_epHm0KrUf-AZ1o4w';
+
+function getDeviceId(){
+  let id = localStorage.getItem('device_id');
+  if(!id){
+    id = 'dev_' + Date.now() + Math.random().toString(36).slice(2,10);
+    localStorage.setItem('device_id', id);
+  }
+  return id;
+}
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for(let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function registerPush(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+  try{
+    const reg = await navigator.serviceWorker.register('sw.js');
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted') return false;
+
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    await fetch(PUSH_SERVER_URL + '/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: getDeviceId(), subscription: sub.toJSON() })
+    });
+    localStorage.setItem('push_enabled', '1');
+    return true;
+  }catch(e){
+    console.error('Abonnement push échoué', e);
+    return false;
+  }
+}
+
+async function schedulePushReminder(task){
+  if(!task.due || !localStorage.getItem('push_enabled')) return;
+  try{
+    const sendAt = new Date(new Date(task.due).getTime() - (task.remindBefore || 0) * 60000);
+    await fetch(PUSH_SERVER_URL + '/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: getDeviceId(),
+        taskId: task.id,
+        due: sendAt.toISOString(),
+        title: task.text,
+        body: task.description || ''
+      })
+    });
+  }catch(e){ console.error('Programmation du push échouée', e); }
+}
+async function cancelPushReminder(taskId){
+  if(!localStorage.getItem('push_enabled')) return;
+  try{
+    await fetch(PUSH_SERVER_URL + '/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId })
+    });
+  }catch(e){ console.error('Annulation du push échouée', e); }
+}
+
 /* ---------- rappels fiables via Google Calendar (fonctionne appli fermée) ---------- */
 // Chaque tâche datée est synchronisée comme événement Google Calendar (avec ou sans Meet).
 // Comme ton compte Google est relié au Calendrier iPhone, les notifications système
 // se déclenchent normalement, même appli fermée — sans avoir besoin d'un serveur séparé.
 
-async function createPlainCalendarEvent(taskText, dueIso, requestId){
+async function createPlainCalendarEvent(taskText, dueIso, requestId, remindBefore){
   const token = await ensureGoogleToken();
   const start = new Date(dueIso);
   const end = new Date(start.getTime() + 30 * 60000);
@@ -1899,7 +2013,7 @@ async function createPlainCalendarEvent(taskText, dueIso, requestId){
     summary: taskText,
     start: { dateTime: start.toISOString(), timeZone: tz },
     end: { dateTime: end.toISOString(), timeZone: tz },
-    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 0 }] }
+    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: remindBefore || 0 }] }
   };
 
   const res = await fetch(
@@ -1923,7 +2037,7 @@ async function syncTaskReminder(task){
   if(!autoSyncEnabled) return; // synchro désactivée par l'utilisateur
   if(!localStorage.getItem('google_was_connected')) return; // pas connecté : on ne force rien
   try{
-    const result = await createPlainCalendarEvent(task.text, task.due, task.id);
+    const result = await createPlainCalendarEvent(task.text, task.due, task.id, task.remindBefore);
     task.gcalEventId = result.gcalEventId;
     await saveTask(task);
     renderAll();
@@ -1967,11 +2081,14 @@ showGoogleCheckbox.addEventListener('change', async ()=>{
 });
 
 function setupNotifPrompt(){
-  if(!localStorage.getItem('google_was_connected')){
+  if(!localStorage.getItem('push_enabled')){
     notifHint.style.display = 'flex';
   }
 }
-notifBtn && notifBtn.addEventListener('click', ()=> switchTab('account'));
+notifBtn && notifBtn.addEventListener('click', async ()=>{
+  const ok = await registerPush();
+  if(ok) notifHint.style.display = 'none';
+});
 
 loadTasks();
 updateTodayHeader();
