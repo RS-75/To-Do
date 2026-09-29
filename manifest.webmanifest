@@ -1,0 +1,12 @@
+{
+  "name": "Journée",
+  "short_name": "Journée",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ECE3D0",
+  "theme_color": "#ECE3D0",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
