@@ -35,6 +35,26 @@
     --gcal:#5B7FA6;
     --gcal-soft:#E9EEF3;
   }
+  
+  /* Mode sombre (Dark mode) */
+  [data-theme="dark"] {
+    --bg: #121212;
+    --card: #1C1C1C;
+    --card-soft: #2C2C2C;
+    --ink: #EAEAEA;
+    --ink-soft: #A1A1A1;
+    --ink-faint: #6B6B6B;
+    --line: #3A3A3A;
+    --accent: #D4A373;
+    --accent-soft: #5C462C;
+    --sage: #8DA37A;
+    --sage-soft: #303A25;
+    --rust: #CC7A64;
+    --rust-soft: #4D2B23;
+    --gcal: #759BCA;
+    --gcal-soft: #263345;
+  }
+
   *{box-sizing:border-box;}
   html, body{
     touch-action:manipulation;
@@ -46,6 +66,7 @@
     font-family:'Inter',sans-serif;
     min-height:100vh;
     -webkit-font-smoothing:antialiased;
+    transition: background 0.3s ease, color 0.3s ease;
   }
   .wrap{
     max-width:460px;
@@ -112,9 +133,9 @@
     cursor:pointer;
   }
   .view-btn.active{
-    background:#FFFFFF;
+    background:var(--card);
     color:var(--ink);
-    box-shadow:0 1px 3px rgba(59,50,38,.10);
+    box-shadow:0 1px 3px rgba(0,0,0,.15);
   }
 
   /* month / year nav */
@@ -156,7 +177,7 @@
     grid-template-columns:repeat(7,1fr);
     grid-auto-rows:44px;
     gap:2px;
-    background:#FFFFFF;
+    background:var(--card);
     border:1px solid var(--line);
     border-radius:14px;
     padding:8px;
@@ -183,7 +204,7 @@
   }
   .month-cell.outside .num{ color:var(--ink-faint); opacity:.5; }
   .month-cell.past .num{ color:var(--ink-faint); }
-  .month-cell.today .num{ background:var(--ink); color:#FFFFFF; }
+  .month-cell.today .num{ background:var(--ink); color:var(--bg); }
   .month-cell.selected:not(.today) .num{ border:1.5px solid var(--accent); }
   .month-cell .dot-indicator{ width:4px;height:4px;border-radius:50%;background:var(--accent); }
   .month-cell .dot-indicator.empty{ background:transparent; }
@@ -196,7 +217,7 @@
     margin-bottom:24px;
   }
   .month-tile{
-    background:#FFFFFF;
+    background:var(--card);
     border:1px solid var(--line);
     border-radius:12px;
     padding:14px 8px;
@@ -264,7 +285,7 @@
     color:var(--ink);
   }
   .week-day.past .num{ color:var(--ink-faint); font-weight:500; }
-  .week-day.today .num{ background:var(--ink); color:#FFFFFF; }
+  .week-day.today .num{ background:var(--ink); color:var(--bg); }
   .week-day.selected:not(.today) .num{ border:1.5px solid var(--accent); }
   .week-day .dot-indicator{
     width:4px;height:4px;
@@ -315,12 +336,12 @@
   /* timeline */
   .timeline-outer{
     position:relative;
-    background:#FFFFFF;
+    background:var(--card);
     border-radius:16px;
     border:1px solid var(--line);
     margin-bottom:20px;
     overflow:hidden;
-    box-shadow:0 2px 10px rgba(59,50,38,.06);
+    box-shadow:0 2px 10px rgba(0,0,0,.06);
   }
   .timeline-scroll{
     max-height:440px;
@@ -351,7 +372,7 @@
     position:absolute;
     left:6px;
     right:10px;
-    background:#FFFFFF;
+    background:var(--bg);
     border:1px solid var(--line);
     border-left:3px solid var(--accent);
     border-radius:10px;
@@ -361,7 +382,7 @@
     display:flex;
     align-items:center;
     gap:8px;
-    box-shadow:0 1px 3px rgba(59,50,38,.08);
+    box-shadow:0 1px 3px rgba(0,0,0,.08);
   }
   .task-card.done{
     border-left-color:var(--sage);
@@ -437,7 +458,7 @@
     flex-direction:column;
     align-items:center;
     text-align:center;
-    background:#FFFFFF;
+    background:var(--card);
     border:1px solid var(--line);
     border-radius:16px;
     padding:32px 20px 26px;
@@ -478,59 +499,65 @@
   .sync-toggle-row{
     display:flex;
     align-items:center;
-    gap:10px;
+    justify-content:space-between;
     font-size:13px;
     color:var(--ink);
     margin-top:18px;
     padding-top:16px;
     border-top:1px solid var(--line);
-    cursor:pointer;
+    width: 100%;
   }
-  .sync-toggle-row input{ width:18px;height:18px;accent-color:var(--accent); flex:0 0 auto; }
+  .sync-toggle-row select { padding: 4px 8px; border-radius: 6px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); font-size: 13px; font-family: 'Inter', sans-serif;}
 
-  .gcal-toggle-row{
-    display:flex;
-    align-items:center;
-    gap:9px;
-    font-size:13px;
-    color:var(--ink-soft);
-    margin:-6px 0 18px;
-    cursor:pointer;
+  /* --- MODERN SWITCH CSS --- */
+  .modern-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    cursor: pointer;
+    margin-bottom: 16px;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--ink);
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s;
   }
-  .gcal-toggle-row input{ width:16px;height:16px;accent-color:var(--gcal); flex:0 0 auto; }
-
-  .timeline.has-gcal .task-card{ right:calc(50% + 2px); padding:7px 8px; }
-  .timeline.has-gcal .task-del{ display:none; }
-  .gcal-card{
-    position:absolute;
-    left:calc(50% + 2px);
-    right:10px;
-    background:var(--gcal-soft);
-    border:1px solid var(--gcal);
-    border-left:3px solid var(--gcal);
-    border-radius:10px;
-    padding:7px 10px;
-    font-size:13px;
-    line-height:1.25;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    text-decoration:none;
-    color:var(--ink);
+  .modern-toggle:active { background: var(--card-soft); }
+  .modern-toggle.small {
+    padding: 10px 14px;
+    border-radius: 12px;
+    margin: 0 0 18px 0;
+    font-size: 13.5px;
+    background: transparent;
+    border: none;
+    padding: 0;
   }
-  .gcal-tag{
-    font-size:9.5px;
-    font-weight:700;
-    color:#fff;
-    background:var(--gcal);
-    border-radius:5px;
-    padding:1px 5px;
-    flex:0 0 auto;
+  .modern-toggle input[type="checkbox"] { display: none; }
+  .switch-track {
+    width: 44px; height: 26px;
+    background: var(--line);
+    border-radius: 26px;
+    position: relative;
+    transition: background 0.3s ease;
+    flex: 0 0 auto;
   }
-  .gcal-card .g-title{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .gcal-card .g-time{ font-size:10.5px; color:var(--ink-soft); flex:0 0 auto; }
-
-  .dot-google{ width:4px;height:4px;border-radius:50%;background:var(--gcal); }
+  .switch-thumb {
+    width: 22px; height: 22px;
+    background: #FFF;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+  .modern-toggle input[type="checkbox"]:checked + .switch-track { background: var(--accent); }
+  .modern-toggle.gcal input[type="checkbox"]:checked + .switch-track { background: var(--gcal); }
+  .modern-toggle.sage input[type="checkbox"]:checked + .switch-track { background: var(--sage); }
+  .modern-toggle input[type="checkbox"]:checked + .switch-track .switch-thumb { transform: translateX(18px); }
 
   .account-note{
     font-size:12px;
@@ -538,21 +565,6 @@
     line-height:1.5;
     text-align:center;
     padding:0 8px;
-  }
-  .meet-toggle{
-    display:flex;
-    align-items:center;
-    gap:9px;
-    font-size:13.5px;
-    color:var(--ink);
-    margin:2px 0 10px;
-    cursor:pointer;
-  }
-  .meet-toggle input{ width:17px;height:17px;accent-color:var(--accent); }
-  .meet-hint{
-    font-size:11.5px;
-    color:var(--ink-soft);
-    margin:-4px 0 14px;
   }
   .meet-error{
     font-size:12.5px;
@@ -572,8 +584,7 @@
     color:var(--ink-soft);
     margin:0 0 6px 2px;
   }
-  input[type=text]{
-    width:100%;
+  input[type=text], input[type=email], input[type=datetime-local], select, textarea{
     border:1px solid var(--line);
     background:var(--card);
     border-radius:10px;
@@ -581,20 +592,15 @@
     font-size:15px;
     color:var(--ink);
     padding:12px 13px;
-    margin-bottom:16px;
   }
-  input[type=text]:focus{outline:2px solid var(--accent-soft);}
-  input[type=datetime-local]{
-    width:100%;
-    border:1px solid var(--line);
-    background:var(--card);
-    border-radius:10px;
-    font-family:'Inter',sans-serif;
-    font-size:14px;
-    color:var(--ink);
-    padding:11px 12px;
-    margin-bottom:20px;
+  input[type=text]:focus, input[type=email]:focus, input[type=datetime-local]:focus, select:focus, textarea:focus{
+    outline:2px solid var(--accent-soft);
   }
+  
+  .qa-row { display: flex; gap: 10px; margin-bottom: 16px; }
+  .qa-row input[type=datetime-local] { flex: 1; margin-bottom: 0; }
+  .qa-row select { flex: 0 0 110px; margin-bottom: 0; }
+
   .btn{
     width:100%;
     border:none;
@@ -605,7 +611,7 @@
     font-weight:600;
     cursor:pointer;
   }
-  .btn-primary{background:var(--ink);color:var(--card);}
+  .btn-primary{background:var(--ink);color:var(--bg);}
   .btn-primary:disabled{opacity:.35;}
   .confirm-note{
     font-size:13px;
@@ -700,13 +706,13 @@
     bottom:88px;
     width:50px;height:50px;
     border-radius:50%;
-    background:#FFFFFF;
+    background:var(--bg);
     color:var(--ink);
     border:1px solid var(--line);
     font-size:26px;
     font-weight:400;
     cursor:pointer;
-    box-shadow:0 4px 14px rgba(59,50,38,.22);
+    box-shadow:0 4px 14px rgba(0,0,0,.15);
     display:none;
     align-items:center;
     justify-content:center;
@@ -716,7 +722,7 @@
 
   .qa-backdrop{
     position:fixed;inset:0;
-    background:rgba(59,50,38,.28);
+    background:rgba(0,0,0,.5);
     display:none;
     z-index:30;
   }
@@ -724,7 +730,7 @@
   .qa-sheet{
     position:fixed;
     left:0;right:0;bottom:0;
-    background:var(--card);
+    background:var(--bg);
     border-radius:20px 20px 0 0;
     padding:20px 18px 24px;
     max-width:460px;
@@ -732,6 +738,7 @@
     transform:translateY(100%);
     transition:transform .22s ease;
     z-index:31;
+    border-top: 1px solid var(--line);
   }
   .qa-sheet.open{transform:translateY(0);}
   .qa-title{
@@ -740,31 +747,10 @@
     font-weight:500;
     margin:0 0 14px;
   }
-  .qa-sheet input[type=text]{margin-bottom:10px;}
-  .qa-sheet textarea{
-    width:100%;
-    border:1px solid var(--line);
-    background:var(--card);
-    border-radius:10px;
-    font-family:'Inter',sans-serif;
-    font-size:14px;
-    color:var(--ink);
-    padding:10px 12px;
-    margin-bottom:10px;
-    resize:vertical;
-  }
-  .qa-sheet input[type=datetime-local]{margin-bottom:10px;}
-  .qa-sheet select{
-    width:100%;
-    border:1px solid var(--line);
-    background:var(--card);
-    border-radius:10px;
-    font-family:'Inter',sans-serif;
-    font-size:14px;
-    color:var(--ink);
-    padding:10px 12px;
-    margin-bottom:0;
-  }
+  .qa-sheet input[type=text]{width: 100%; margin-bottom:10px;}
+  .qa-sheet textarea{width:100%; margin-bottom:10px; resize:vertical; font-size:14px; padding:10px 12px;}
+  .qa-sheet select{font-size:14px; padding:10px 12px;}
+  
   .qa-actions{
     display:flex;
     gap:10px;
@@ -801,18 +787,6 @@
   .tab-btn span{font-size:10.5px;font-weight:500;}
   .tab-btn.active{color:var(--ink);}
   .tab-btn.active svg{stroke:var(--ink);}
-  .tab-btn .tab-badge{
-    position:absolute;
-    margin-left:14px;margin-top:-3px;
-    background:var(--accent);
-    color:var(--card);
-    font-size:9px;
-    font-weight:700;
-    border-radius:8px;
-    min-width:14px;height:14px;
-    display:flex;align-items:center;justify-content:center;
-    padding:0 3px;
-  }
 </style>
 </head>
 <body>
@@ -825,8 +799,8 @@
     </div>
     <div class="ring-wrap">
       <svg width="40" height="40" viewBox="0 0 42 42">
-        <circle cx="21" cy="21" r="17" fill="none" stroke="#DDD1B2" stroke-width="4"/>
-        <circle id="ringProgress" cx="21" cy="21" r="17" fill="none" stroke="#B8863B" stroke-width="4"
+        <circle cx="21" cy="21" r="17" fill="none" stroke="var(--line)" stroke-width="4"/>
+        <circle id="ringProgress" cx="21" cy="21" r="17" fill="none" stroke="var(--accent)" stroke-width="4"
                 stroke-linecap="round" stroke-dasharray="106.8" stroke-dashoffset="106.8"
                 transform="rotate(-90 21 21)"/>
       </svg>
@@ -847,9 +821,11 @@
       <button class="view-btn" data-view="year">Année</button>
     </div>
 
-    <label class="gcal-toggle-row">
+    <!-- NOUVEAU BOUTON GOOGLE CALENDAR -->
+    <label class="modern-toggle small gcal">
+      <span style="color:var(--ink-soft);">Afficher mon agenda Google</span>
       <input type="checkbox" id="showGoogleCheckbox">
-      <span>Afficher mon agenda Google</span>
+      <div class="switch-track"><div class="switch-thumb"></div></div>
     </label>
 
     <div class="view-content" id="view-day">
@@ -905,10 +881,23 @@
     <div class="account-note">
       Ce compte sert uniquement à créer des événements dans ton calendrier Google (avec lien Meet) et à afficher ton nom, ton email et ta photo ici. L'appli n'a pas accès à tes messages ni à tes contacts.
     </div>
-
+    
     <label class="sync-toggle-row">
+      <div style="display:flex; align-items:center;">
+        <span>Thème de l'application</span>
+      </div>
+      <select id="themeSelect">
+        <option value="auto">Automatique</option>
+        <option value="light">Clair</option>
+        <option value="dark">Sombre</option>
+      </select>
+    </label>
+
+    <!-- NOUVEAU BOUTON SYNCHRO -->
+    <label class="modern-toggle sage" style="margin-top:20px;">
+      <span>Sync. automatique avec Google</span>
       <input type="checkbox" id="autoSyncCheckbox">
-      <span>Synchroniser automatiquement mes tâches datées avec Google Calendar</span>
+      <div class="switch-track"><div class="switch-thumb"></div></div>
     </label>
 
     <div class="account-card" style="margin-top: 20px; align-items: stretch; text-align: left; padding: 20px;">
@@ -932,8 +921,20 @@
   <form id="qaForm">
     <input type="text" id="qaTaskInput" placeholder="Que faut-il faire ?" autocomplete="off">
     <textarea id="qaDescInput" placeholder="Description (optionnel)" rows="2"></textarea>
-    <input type="datetime-local" id="qaDateInput">
-    <select id="qaRemindSelect">
+    
+    <div class="qa-row">
+      <input type="datetime-local" id="qaDateInput">
+      <select id="qaDurationSelect">
+        <option value="15">15 min</option>
+        <option value="30" selected>30 min</option>
+        <option value="45">45 min</option>
+        <option value="60">1 heure</option>
+        <option value="90">1h30</option>
+        <option value="120">2 heures</option>
+      </select>
+    </div>
+    
+    <select id="qaRemindSelect" style="width: 100%; margin-bottom:16px;">
       <option value="0">Rappel à l'heure</option>
       <option value="5">5 min avant</option>
       <option value="15">15 min avant</option>
@@ -941,12 +942,16 @@
       <option value="60">1 h avant</option>
       <option value="1440">1 jour avant</option>
     </select>
-    <label class="meet-toggle">
+    
+    <!-- NOUVEAU BOUTON VISIO MEET -->
+    <label class="modern-toggle" style="margin-top:10px;">
+      <span style="display:flex; align-items:center; gap:8px;">🎥 Visioconférence Meet</span>
       <input type="checkbox" id="qaMeetCheckbox">
-      <span>Visioconférence Google Meet</span>
+      <div class="switch-track"><div class="switch-thumb"></div></div>
     </label>
-    <div id="qaMeetFields" style="display:none;">
-      <input type="email" id="qaMeetEmailInput" list="contactsDatalist" placeholder="Email de l'invité" autocomplete="off">
+
+    <div id="qaMeetFields" style="display:none; width: 100%;">
+      <input type="email" id="qaMeetEmailInput" list="contactsDatalist" placeholder="Email de l'invité" autocomplete="off" style="width:100%;">
       <datalist id="contactsDatalist"></datalist>
     </div>
     <div class="meet-error" id="qaMeetError" style="display:none;"></div>
@@ -998,6 +1003,30 @@
 </nav>
 
 <script>
+/* ---------- Theme Setup ---------- */
+const themeSelect = document.getElementById('themeSelect');
+let currentTheme = localStorage.getItem('theme_pref') || 'auto';
+themeSelect.value = currentTheme;
+
+function applyTheme(theme) {
+  if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+applyTheme(currentTheme);
+
+themeSelect.addEventListener('change', (e) => {
+  currentTheme = e.target.value;
+  localStorage.setItem('theme_pref', currentTheme);
+  applyTheme(currentTheme);
+});
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if(currentTheme === 'auto') applyTheme('auto');
+});
+
 const LOCAL_KEY = 'journee_todos_v1';
 const START_HOUR = 6;
 const END_HOUR = 23; // inclusive
@@ -1053,6 +1082,7 @@ const qaMeetFields = document.getElementById('qaMeetFields');
 const qaMeetEmailInput = document.getElementById('qaMeetEmailInput');
 const qaMeetError = document.getElementById('qaMeetError');
 const qaDescInput = document.getElementById('qaDescInput');
+const qaDurationSelect = document.getElementById('qaDurationSelect');
 
 const notifHint = document.getElementById('notifHint');
 const notifBtn = document.getElementById('notifBtn');
@@ -1451,6 +1481,14 @@ function renderTimeline(){
     if(!lane) return;
     const minuteOffset = d.getHours() < START_HOUR ? 0 : (d.getHours() > END_HOUR ? 0 : d.getMinutes());
     const late = !t.done && d < now;
+    
+    // Format duration text
+    let timeStr = fmtTime(t.due);
+    if(t.duration) {
+       const endDate = new Date(d.getTime() + t.duration * 60000);
+       timeStr += ' - ' + fmtTime(endDate);
+    }
+    
     const card = document.createElement('div');
     card.className = `task-card task-row ${t.done?'done':''} ${late?'late':''}`;
     card.style.top = minuteOffset + 'px';
@@ -1459,7 +1497,7 @@ function renderTimeline(){
       <button class="task-check ${t.done?'done':''}" data-action="toggle" data-id="${t.id}"></button>
       <div class="task-info">
         <div class="task-title ${t.done?'done':''}">${escapeHtml(t.text)}</div>
-        <div class="task-time">${fmtTime(t.due)}${late?' · en retard':''}${t.meetLink ? ` · <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥 Meet</a>` : ''}</div>
+        <div class="task-time">${timeStr}${late?' · en retard':''}${t.meetLink ? ` · <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥 Meet</a>` : ''}</div>
       </div>
       <button class="task-del" data-action="delete" data-id="${t.id}">×</button>
     `;
@@ -1521,14 +1559,20 @@ function renderUpcoming(){
   }
   upcomingWrap.innerHTML = `
     <ul class="agenda-list">
-      ${upcoming.map(t => `
+      ${upcoming.map(t => {
+        let timeStr = fmtDateShort(t.due);
+        if(t.duration) {
+          const endDate = new Date(new Date(t.due).getTime() + t.duration * 60000);
+          timeStr += ' - ' + fmtTime(endDate);
+        }
+        return `
         <li class="agenda-item task-row" data-id="${t.id}">
           <span class="dot"></span>
           <span class="txt">${escapeHtml(t.text)}${t.meetLink ? ` <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥</a>` : ''}</span>
-          <span class="when">${fmtDateShort(t.due)}</span>
+          <span class="when">${timeStr}</span>
           <button class="del" data-action="delete" data-id="${t.id}">×</button>
         </li>
-      `).join('')}
+      `}).join('')}
     </ul>
   `;
 }
@@ -1650,7 +1694,12 @@ function openTaskDetail(id){
 
   if(t.due){
     detailWhenRow.style.display = 'flex';
-    detailWhen.textContent = fmtDateShort(t.due);
+    let timeStr = fmtDateShort(t.due);
+    if (t.duration) {
+        const endDate = new Date(new Date(t.due).getTime() + t.duration * 60000);
+        timeStr += ' - ' + fmtTime(endDate);
+    }
+    detailWhen.textContent = timeStr;
   } else {
     detailWhenRow.style.display = 'none';
   }
@@ -1710,10 +1759,16 @@ detailDeleteBtn.addEventListener('click', async ()=>{
 function openQuickAdd(){
   qaBackdrop.classList.add('open');
   qaSheet.classList.add('open');
+  
+  // Définit la date sélectionnée avec l'heure actuelle de l'appareil
+  const now = new Date();
   const y = selectedDate.getFullYear();
   const m = String(selectedDate.getMonth()+1).padStart(2,'0');
   const d = String(selectedDate.getDate()).padStart(2,'0');
-  qaDateInput.value = `${y}-${m}-${d}T09:00`;
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  
+  qaDateInput.value = `${y}-${m}-${d}T${hh}:${mm}`;
   setTimeout(()=> qaTaskInput.focus(), 150);
 }
 function closeQuickAdd(){
@@ -1722,6 +1777,7 @@ function closeQuickAdd(){
   qaTaskInput.value = '';
   qaDescInput.value = '';
   qaDateInput.value = '';
+  qaDurationSelect.value = '30';
   qaRemindSelect.value = '0';
   qaSubmitBtn.disabled = true;
   qaMeetCheckbox.checked = false;
@@ -1749,11 +1805,14 @@ qaForm.addEventListener('submit', async (e)=>{
     return;
   }
 
+  const duration = parseInt(qaDurationSelect.value, 10) || 30;
+
   const t = {
     id: uid(),
     text,
     description: qaDescInput.value.trim() || null,
     due: qaDateInput.value ? new Date(qaDateInput.value).toISOString() : null,
+    duration: qaDateInput.value ? duration : null,
     remindBefore: parseInt(qaRemindSelect.value, 10) || 0,
     done: false,
     createdAt: Date.now(),
@@ -1770,7 +1829,7 @@ qaForm.addEventListener('submit', async (e)=>{
     qaSubmitBtn.disabled = true;
     qaSubmitBtn.textContent = 'Création du Meet…';
     try{
-      const result = await createGoogleMeetEvent(t.text, t.due, email, t.id, t.remindBefore);
+      const result = await createGoogleMeetEvent(t.text, t.due, email, t.id, t.remindBefore, t.duration);
       t.meetLink = result.meetLink;
       t.gcalEventId = result.gcalEventId;
       await saveTask(t);
@@ -1939,10 +1998,10 @@ gAccountBtn.addEventListener('click', async ()=>{
   }
 });
 
-async function createGoogleMeetEvent(taskText, dueIso, attendeeEmail, requestId, remindBefore){
+async function createGoogleMeetEvent(taskText, dueIso, attendeeEmail, requestId, remindBefore, durationMinutes){
   const token = await ensureGoogleToken();
   const start = new Date(dueIso);
-  const end = new Date(start.getTime() + 30 * 60000);
+  const end = new Date(start.getTime() + (durationMinutes || 30) * 60000);
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const body = {
@@ -2074,14 +2133,10 @@ async function cancelPushReminder(taskId){
 }
 
 /* ---------- rappels fiables via Google Calendar (fonctionne appli fermée) ---------- */
-// Chaque tâche datée est synchronisée comme événement Google Calendar (avec ou sans Meet).
-// Comme ton compte Google est relié au Calendrier iPhone, les notifications système
-// se déclenchent normalement, même appli fermée — sans avoir besoin d'un serveur séparé.
-
-async function createPlainCalendarEvent(taskText, dueIso, requestId, remindBefore){
+async function createPlainCalendarEvent(taskText, dueIso, requestId, remindBefore, durationMinutes){
   const token = await ensureGoogleToken();
   const start = new Date(dueIso);
-  const end = new Date(start.getTime() + 30 * 60000);
+  const end = new Date(start.getTime() + (durationMinutes || 30) * 60000);
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const body = {
@@ -2109,10 +2164,10 @@ async function createPlainCalendarEvent(taskText, dueIso, requestId, remindBefor
 
 async function syncTaskReminder(task){
   if(!task.due) return;
-  if(!autoSyncEnabled) return; // synchro désactivée par l'utilisateur
-  if(!localStorage.getItem('google_was_connected')) return; // pas connecté : on ne force rien
+  if(!autoSyncEnabled) return; 
+  if(!localStorage.getItem('google_was_connected')) return; 
   try{
-    const result = await createPlainCalendarEvent(task.text, task.due, task.id, task.remindBefore);
+    const result = await createPlainCalendarEvent(task.text, task.due, task.id, task.remindBefore, task.duration);
     task.gcalEventId = result.gcalEventId;
     await saveTask(task);
     renderAll();
@@ -2141,7 +2196,6 @@ showGoogleCheckbox.addEventListener('change', async ()=>{
   lastDayFetchKey = null;
   lastMonthFetchKey = null;
   if(showGoogleCal && !localStorage.getItem('google_was_connected')){
-    // il faut d'abord se connecter : on connecte puis on affiche
     try{
       const token = await requestGoogleToken(true);
       await fetchAndStoreProfile(token);
