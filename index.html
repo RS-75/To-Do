@@ -821,7 +821,7 @@
       <button class="view-btn" data-view="year">Année</button>
     </div>
 
-    <!-- NOUVEAU BOUTON GOOGLE CALENDAR -->
+    <!-- BOUTON GOOGLE CALENDAR -->
     <label class="modern-toggle small gcal">
       <span style="color:var(--ink-soft);">Afficher mon agenda Google</span>
       <input type="checkbox" id="showGoogleCheckbox">
@@ -881,40 +881,55 @@
     <div class="account-note">
       Ce compte sert uniquement à créer des événements dans ton calendrier Google (avec lien Meet) et à afficher ton nom, ton email et ta photo ici. L'appli n'a pas accès à tes messages ni à tes contacts.
     </div>
-    
-    <label class="sync-toggle-row">
-      <div style="display:flex; align-items:center;">
-        <span>Thème de l'application</span>
-      </div>
-      <select id="themeSelect">
-        <option value="auto">Automatique</option>
-        <option value="light">Clair</option>
-        <option value="dark">Sombre</option>
-      </select>
-    </label>
 
-    <!-- NOUVEAU BOUTON SYNCHRO -->
-    <label class="modern-toggle sage" style="margin-top:20px;">
-      <span>Sync. automatique avec Google</span>
-      <input type="checkbox" id="autoSyncCheckbox">
-      <div class="switch-track"><div class="switch-thumb"></div></div>
-    </label>
-
-    <div class="account-card" style="margin-top: 20px; align-items: stretch; text-align: left; padding: 20px;">
-      <div class="section-title" style="margin-bottom: 12px; margin-left: 0;">Contacts rapides (Visio)</div>
-      <form id="contactForm" style="display:flex; gap:8px; margin-bottom: 16px;">
-        <input type="text" id="contactName" placeholder="Nom" required style="margin-bottom:0; flex:1; padding: 8px 10px; font-size:13px;">
-        <input type="email" id="contactEmail" placeholder="Email" required style="margin-bottom:0; flex:1.5; padding: 8px 10px; font-size:13px;">
-        <button type="submit" class="btn btn-primary" style="padding: 8px 12px; width:auto;">+</button>
-      </form>
-      <div id="contactListWrap"></div>
-    </div>
+    <!-- NOUVEAU BOUTON POUR OUVRIR LES PARAMÈTRES -->
+    <button class="modern-toggle" id="openSettingsBtn" style="margin-top: 24px; width: 100%; padding: 16px;">
+      <span style="display:flex; align-items:center; gap:8px; font-size: 15px;">⚙️ Paramètres</span>
+      <span style="color:var(--ink-faint); font-size: 20px; line-height: 1;">›</span>
+    </button>
   </section>
 
 </div>
 
 <button class="quick-fab" id="quickFab" aria-label="Ajouter rapidement">+</button>
 
+<!-- MENU PARAMETRES EN SOUS-FENETRE -->
+<div class="qa-backdrop" id="settingsBackdrop"></div>
+<div class="qa-sheet detail-sheet" id="settingsSheet" style="max-height: 85vh; overflow-y: auto;">
+  <div class="detail-header" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div class="detail-title" style="margin:0;">Paramètres</div>
+    <button type="button" class="btn btn-ghost" id="settingsCloseBtn" style="width:auto; padding:6px 12px; margin:0;">Fermer</button>
+  </div>
+
+  <label class="sync-toggle-row">
+    <div style="display:flex; align-items:center;">
+      <span>Thème de l'application</span>
+    </div>
+    <select id="themeSelect">
+      <option value="auto">Automatique</option>
+      <option value="light">Clair</option>
+      <option value="dark">Sombre</option>
+    </select>
+  </label>
+
+  <label class="modern-toggle sage" style="margin-top:20px;">
+    <span>Sync. automatique avec Google</span>
+    <input type="checkbox" id="autoSyncCheckbox">
+    <div class="switch-track"><div class="switch-thumb"></div></div>
+  </label>
+
+  <div class="account-card" style="margin-top: 24px; align-items: stretch; text-align: left; padding: 20px; background: var(--bg);">
+    <div class="section-title" style="margin-bottom: 12px; margin-left: 0;">Contacts rapides (Visio)</div>
+    <form id="contactForm" style="display:flex; gap:8px; margin-bottom: 16px;">
+      <input type="text" id="contactName" placeholder="Nom" required style="margin-bottom:0; flex:1; padding: 8px 10px; font-size:13px;">
+      <input type="email" id="contactEmail" placeholder="Email" required style="margin-bottom:0; flex:1.5; padding: 8px 10px; font-size:13px;">
+      <button type="submit" class="btn btn-primary" style="padding: 8px 12px; width:auto;">+</button>
+    </form>
+    <div id="contactListWrap"></div>
+  </div>
+</div>
+
+<!-- FENETRE AJOUT RAPIDE -->
 <div class="qa-backdrop" id="qaBackdrop"></div>
 <div class="qa-sheet" id="qaSheet">
   <div class="qa-title">Ajout rapide</div>
@@ -943,7 +958,7 @@
       <option value="1440">1 jour avant</option>
     </select>
     
-    <!-- NOUVEAU BOUTON VISIO MEET -->
+    <!-- BOUTON VISIO MEET -->
     <label class="modern-toggle" style="margin-top:10px;">
       <span style="display:flex; align-items:center; gap:8px;">🎥 Visioconférence Meet</span>
       <input type="checkbox" id="qaMeetCheckbox">
@@ -1006,7 +1021,7 @@
 /* ---------- Theme Setup ---------- */
 const themeSelect = document.getElementById('themeSelect');
 let currentTheme = localStorage.getItem('theme_pref') || 'auto';
-themeSelect.value = currentTheme;
+if(themeSelect) themeSelect.value = currentTheme;
 
 function applyTheme(theme) {
   if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -1017,15 +1032,42 @@ function applyTheme(theme) {
 }
 applyTheme(currentTheme);
 
-themeSelect.addEventListener('change', (e) => {
-  currentTheme = e.target.value;
-  localStorage.setItem('theme_pref', currentTheme);
-  applyTheme(currentTheme);
-});
+if(themeSelect) {
+  themeSelect.addEventListener('change', (e) => {
+    currentTheme = e.target.value;
+    localStorage.setItem('theme_pref', currentTheme);
+    applyTheme(currentTheme);
+  });
+}
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if(currentTheme === 'auto') applyTheme('auto');
 });
+
+/* ---------- Settings Panel Logic ---------- */
+const settingsBackdrop = document.getElementById('settingsBackdrop');
+const settingsSheet = document.getElementById('settingsSheet');
+const openSettingsBtn = document.getElementById('openSettingsBtn');
+const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+
+if(openSettingsBtn) {
+  openSettingsBtn.addEventListener('click', () => {
+    settingsBackdrop.classList.add('open');
+    settingsSheet.classList.add('open');
+  });
+}
+if(settingsCloseBtn) {
+  settingsCloseBtn.addEventListener('click', () => {
+    settingsBackdrop.classList.remove('open');
+    settingsSheet.classList.remove('open');
+  });
+}
+if(settingsBackdrop) {
+  settingsBackdrop.addEventListener('click', () => {
+    settingsBackdrop.classList.remove('open');
+    settingsSheet.classList.remove('open');
+  });
+}
 
 const LOCAL_KEY = 'journee_todos_v1';
 const START_HOUR = 6;
