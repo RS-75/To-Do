@@ -91,7 +91,8 @@
   [data-theme="glass"] .qa-sheet,
   [data-theme="glass"] .tabbar,
   [data-theme="glass"] .quick-fab,
-  [data-theme="glass"] .collapsible-header {
+  [data-theme="glass"] .collapsible-header,
+  [data-theme="glass"] .weather-pill {
     background: var(--card);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -162,9 +163,23 @@
     position:relative; min-height:100vh; padding-bottom:96px;
   }
 
-  header{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px; }
+  header{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
   .day-name{ font-size:12.5px; color:var(--ink-soft); text-transform:lowercase; margin-bottom:2px; }
   h1{ font-family:'Fraunces',serif; font-weight:500; font-size:28px; margin:0; line-height:1.05; }
+  .header-actions{ display:flex; align-items:center; gap:10px; }
+  
+  /* PASTILLE MÉTÉO ÉPURÉE */
+  .weather-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 6px 10px; font-size: 12px; font-weight: 500; color: var(--ink);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04); cursor: pointer; user-select: none;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .weather-pill:active { transform: scale(0.96); }
+  .weather-temp { font-weight: 600; }
+  .weather-city { font-size: 10.5px; color: var(--ink-soft); max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   .ring-wrap{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px; }
   .ring-num{ font-size:11px; color:var(--ink-soft); font-weight:500; }
 
@@ -495,14 +510,24 @@
       <div class="day-name" id="dayName"></div>
       <h1 id="pageTitle">Aujourd'hui</h1>
     </div>
-    <div class="ring-wrap">
-      <svg width="40" height="40" viewBox="0 0 42 42">
-        <circle cx="21" cy="21" r="17" fill="none" stroke="var(--line)" stroke-width="4"/>
-        <circle id="ringProgress" cx="21" cy="21" r="17" fill="none" stroke="var(--accent)" stroke-width="4"
-                stroke-linecap="round" stroke-dasharray="106.8" stroke-dashoffset="106.8"
-                transform="rotate(-90 21 21)"/>
-      </svg>
-      <div class="ring-num" id="ringNum">0/0</div>
+    
+    <div class="header-actions">
+      <!-- PASTILLE METEO -->
+      <div class="weather-pill" id="weatherPill" style="display:none;" title="Cliquer pour actualiser la météo">
+        <span id="weatherIcon">☀️</span>
+        <span class="weather-temp" id="weatherTemp">--°</span>
+        <span class="weather-city" id="weatherCity"></span>
+      </div>
+
+      <div class="ring-wrap">
+        <svg width="40" height="40" viewBox="0 0 42 42">
+          <circle cx="21" cy="21" r="17" fill="none" stroke="var(--line)" stroke-width="4"/>
+          <circle id="ringProgress" cx="21" cy="21" r="17" fill="none" stroke="var(--accent)" stroke-width="4"
+                  stroke-linecap="round" stroke-dasharray="106.8" stroke-dashoffset="106.8"
+                  transform="rotate(-90 21 21)"/>
+        </svg>
+        <div class="ring-num" id="ringNum">0/0</div>
+      </div>
     </div>
   </header>
 
@@ -902,6 +927,12 @@ const doneWrap = document.getElementById('doneWrap');
 const ringProgress = document.getElementById('ringProgress');
 const ringNum = document.getElementById('ringNum');
 
+/* METEO DOM */
+const weatherPill = document.getElementById('weatherPill');
+const weatherIcon = document.getElementById('weatherIcon');
+const weatherTemp = document.getElementById('weatherTemp');
+const weatherCity = document.getElementById('weatherCity');
+
 const gAvatar = document.getElementById('gAvatar');
 const gAvatarPlaceholder = document.getElementById('gAvatarPlaceholder');
 const gName = document.getElementById('gName');
@@ -948,6 +979,77 @@ const qaSubmitBtn = document.getElementById('qaSubmitBtn');
 const qaCancelBtn = document.getElementById('qaCancelBtn');
 
 const TAB_TITLES = { today: "Aujourd'hui", tasks: 'Tâches', stats: 'Bilan', account: 'Compte' };
+
+/* GESTION DE LA METEO GEOLOCALISEE */
+const WMO_WEATHER_ICONS = {
+  0: '☀️',
+  1: '🌤️', 2: '⛅', 3: '☁️',
+  45: '🌫️️', 48: '🌫️',
+  51: '🌦️', 53: '🌦️', 55: '🌧️',
+  61: '🌧️', 63: '🌧️', 65: '🌧️',
+  71: '🌨️', 73: '🌨️', 75: '❄️', 77: '❄️',
+  80: '🌦️', 81: '🌧️', 82: '🌧️',
+  85: '🌨️', 86: '❄️',
+  95: '⛈️', 96: '⛈️', 99: '⛈️'
+};
+
+async function fetchWeatherForLocation(lat, lon) {
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      temp: Math.round(data.current.temperature_2m),
+      code: data.current.weather_code
+    };
+  } catch(e) {
+    return null;
+  }
+}
+
+async function fetchCityName(lat, lon) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`);
+    if (!res.ok) return '';
+    const data = await res.json();
+    return data.address.city || data.address.town || data.address.village || data.address.municipality || '';
+  } catch(e) {
+    return '';
+  }
+}
+
+async function updateWeatherWidget() {
+  if (!('geolocation' in navigator)) return;
+  
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    
+    const weather = await fetchWeatherForLocation(lat, lon);
+    if (!weather) return;
+    
+    const city = await fetchCityName(lat, lon);
+    
+    weatherTemp.textContent = `${weather.temp}°`;
+    weatherIcon.textContent = WMO_WEATHER_ICONS[weather.code] || '☀️';
+    if (city) {
+      weatherCity.textContent = city;
+      weatherCity.style.display = 'inline';
+    } else {
+      weatherCity.style.display = 'none';
+    }
+    
+    weatherPill.style.display = 'flex';
+  }, (err) => {
+    console.warn("Géolocalisation météo refusée ou indisponible :", err.message);
+  }, { timeout: 10000 });
+}
+
+if (weatherPill) {
+  weatherPill.addEventListener('click', () => {
+    updateWeatherWidget();
+  });
+}
 
 function renderTagFilterBar() {
   const colorKeys = ['all', 'default', 'red', 'blue', 'green', 'yellow', 'purple'];
@@ -2444,7 +2546,9 @@ loadTasks();
 updateTodayHeader();
 initGoogleAuth();
 setupNotifPrompt();
+updateWeatherWidget();
 setInterval(()=>{ renderAll(); }, 60000);
+setInterval(()=>{ updateWeatherWidget(); }, 1800000); // Actualisation météo toutes les 30 min
 quickFab.classList.add('show');
 if(SpeechRecognition) quickMicFab.classList.add('show');
 setTimeout(scrollToNow, 200);
