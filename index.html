@@ -111,12 +111,7 @@
     background: rgba(0,0,0,0.6);
     color: #fff;
   }
-  [data-theme="glass"] .mic-fab.listening {
-    background: rgba(231, 76, 60, 0.8);
-    border-color: rgba(231, 76, 60, 0.9);
-  }
 
-  /* ÉCRAN DE CHARGEMENT */
   #splashScreen {
     position: fixed; inset: 0; background: #ECE3D0; z-index: 9999;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -227,7 +222,6 @@
   .tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
   .tray::-webkit-scrollbar{display:none;}
   
-  /* DRAGGABLE ITEMS */
   .draggable-item {
     cursor: grab; user-select: none; -webkit-user-select: none;
     transition: opacity 0.2s ease, transform 0.2s ease;
@@ -279,7 +273,6 @@
   .now-line{ position:absolute; left:52px; right:0; height:0; border-top:1.5px solid var(--rust); z-index:5; }
   .now-line::before{ content:''; position:absolute; left:-4px; top:-3.5px; width:7px; height:7px; border-radius:50%; background:var(--rust); }
 
-  /* ONGLETS ACCORDÉONS (TÂCHES) */
   .collapsible-group { margin-bottom: 16px; }
   .collapsible-header {
     width: 100%; display: flex; justify-content: space-between; align-items: center;
@@ -392,7 +385,6 @@
   .notif-hint{ font-size:12px; color:var(--ink-soft); margin:-6px 0 20px; display:flex; align-items:center; gap:8px; }
   .notif-hint button{ background:none; border:1px solid var(--line); border-radius:8px; padding:4px 10px; font-size:12px; color:var(--ink); cursor:pointer; }
 
-  /* FAB & BOUTON IA (Étoiles magiques) */
   .quick-fab{
     position:fixed; right:20px; bottom:88px; width:50px; height:50px; border-radius:50%;
     background:var(--bg); color:var(--ink); border:1px solid var(--line); font-size:26px; font-weight:400;
@@ -443,7 +435,6 @@
 </head>
 <body>
 
-  <!-- ÉCRAN DE CHARGEMENT AVEC TON LOGO EXHAUSTIF ET BARRE DE PROGRESSION -->
   <div id="splashScreen">
     <div class="splash-logo-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -478,7 +469,6 @@
     <button id="notifBtn">Activer</button>
   </div>
 
-  <!-- AUJOURD'HUI -->
   <section class="panel active" id="panel-today">
     <div class="view-switch" id="viewSwitch">
       <button class="view-btn active" data-view="day">Jour</button>
@@ -522,7 +512,6 @@
     </div>
   </section>
 
-  <!-- NOUVEL ONGLET FUSIONNÉ : TÂCHES (À VENIR & FAIT) -->
   <section class="panel" id="panel-tasks">
     
     <div class="collapsible-group">
@@ -547,7 +536,6 @@
 
   </section>
 
-  <!-- STATS & BILAN -->
   <section class="panel" id="panel-stats">
     <div class="stats-card">
       <div class="section-title" style="margin:0;">Bilan de productivité (7 derniers jours)</div>
@@ -562,7 +550,6 @@
     </div>
   </section>
 
-  <!-- COMPTE -->
   <section class="panel" id="panel-account">
     <div class="account-card">
       <img id="gAvatar" class="g-avatar" src="" alt="" style="display:none;">
@@ -572,7 +559,7 @@
       <button type="button" class="btn btn-primary" id="gAccountBtn" style="margin-top:16px;">Se connecter à Google</button>
     </div>
     <div class="account-note">
-      Ce compte sert uniquement à créer des événements dans ton calendrier Google (avec lien Meet) et à afficher ton nom, ton email et ta photo ici.
+      Ce compte sert à synchroniser vos rendez-vous et vos tâches dans les deux sens, créer des visioconférences Meet, et afficher votre profil.
     </div>
 
     <button class="modern-toggle" id="openSettingsBtn" style="margin-top: 24px; width: 100%; padding: 16px;">
@@ -588,7 +575,6 @@
 
 <button class="quick-fab" id="quickFab" aria-label="Ajouter rapidement">+</button>
 
-<!-- BOUTON ASSISTANT IA -->
 <button class="quick-fab mic-fab" id="quickMicFab" aria-label="Assistant IA vocal">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"></path>
@@ -596,7 +582,6 @@
   </svg>
 </button>
 
-<!-- MENU PARAMETRES -->
 <div class="qa-backdrop" id="settingsBackdrop"></div>
 <div class="qa-sheet detail-sheet" id="settingsSheet" style="max-height: 85vh; overflow-y: auto;">
   <div class="detail-header" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
@@ -617,7 +602,10 @@
   </label>
 
   <label class="modern-toggle sage" style="margin-top:20px;">
-    <span>Sync. automatique avec Google</span>
+    <span style="display:flex; flex-direction:column;">
+      <span>Sync. bidirectionnelle Google</span>
+      <span style="font-size:11px; color:var(--ink-soft); font-weight:400; margin-top:2px;">Importe les rdv et exporte les tâches</span>
+    </span>
     <input type="checkbox" id="autoSyncCheckbox">
     <div class="switch-track"><div class="switch-thumb"></div></div>
   </label>
@@ -633,7 +621,6 @@
   </div>
 </div>
 
-<!-- FENETRE AJOUT RAPIDE -->
 <div class="qa-backdrop" id="qaBackdrop"></div>
 <div class="qa-sheet" id="qaSheet">
   <div class="qa-title">Ajout rapide</div>
@@ -734,7 +721,6 @@
 </nav>
 
 <script>
-/* Gestion de l'écran de chargement */
 window.addEventListener('load', () => {
   const splash = document.getElementById('splashScreen');
   if(splash) {
@@ -744,7 +730,6 @@ window.addEventListener('load', () => {
   }
 });
 
-/* Gestion des accordéons (Tâches À venir / Fait) */
 document.querySelectorAll('.collapsible-header').forEach(header => {
   header.addEventListener('click', () => {
     header.classList.toggle('active');
@@ -891,7 +876,6 @@ const qaCancelBtn = document.getElementById('qaCancelBtn');
 
 const TAB_TITLES = { today: "Aujourd'hui", tasks: 'Tâches', stats: 'Bilan', account: 'Compte' };
 
-/* ---------- AJOUT VOCAL (ASSISTANT IA) ---------- */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 
@@ -1208,8 +1192,54 @@ async function fetchGoogleEventsRange(timeMinIso, timeMaxIso){
       title: e.summary || '(sans titre)',
       start: e.start.dateTime,
       end: e.end && e.end.dateTime,
-      htmlLink: e.htmlLink
+      htmlLink: e.htmlLink,
+      meetLink: (e.conferenceData && e.conferenceData.entryPoints && e.conferenceData.entryPoints.find(p=>p.entryPointType==='video')?.uri) || e.hangoutLink || null
     }));
+}
+
+/* IMPORT AUTOMATIQUE DES ÉVÉNEMENTS GOOGLE VERS LES TÂCHES */
+async function importGoogleEventsToTasks(events) {
+  let updated = false;
+  for (const ev of events) {
+    if (!tasks.some(t => t.gcalEventId === ev.id)) {
+      let duration = 30;
+      if (ev.end) {
+        const diff = new Date(ev.end).getTime() - new Date(ev.start).getTime();
+        duration = Math.round(diff / 60000);
+      }
+      const newTask = {
+        id: uid(),
+        text: ev.title,
+        description: '',
+        due: ev.start,
+        duration: duration,
+        repeat: 'none',
+        remindBefore: 15,
+        done: false,
+        createdAt: Date.now(),
+        meetLink: ev.meetLink || ev.htmlLink,
+        gcalEventId: ev.id
+      };
+      tasks.push(newTask);
+      updated = true;
+      schedulePushReminder(newTask);
+    }
+  }
+  if (updated) persistAll();
+  return updated;
+}
+
+/* SYNCHRO EN ARRIÈRE-PLAN POUR L'ONGLET "À VENIR" (14 prochains jours) */
+async function backgroundSyncGoogle() {
+  if (!autoSyncEnabled || !localStorage.getItem('google_was_connected')) return;
+  try {
+     const start = startOfDay(new Date());
+     const end = new Date(start);
+     end.setDate(end.getDate() + 14);
+     const upcomingEvents = await fetchGoogleEventsRange(start.toISOString(), end.toISOString());
+     const updated = await importGoogleEventsToTasks(upcomingEvents);
+     if(updated) renderAll();
+  } catch(e) { console.error("Erreur import auto:", e); }
 }
 
 async function ensureDayGoogleEvents(){
@@ -1225,6 +1255,10 @@ async function ensureDayGoogleEvents(){
     const dayStart = new Date(selectedDate); dayStart.setHours(0,0,0,0);
     const dayEnd = new Date(selectedDate); dayEnd.setHours(23,59,59,999);
     dayGoogleEvents = await fetchGoogleEventsRange(dayStart.toISOString(), dayEnd.toISOString());
+    
+    if(autoSyncEnabled) {
+      await importGoogleEventsToTasks(dayGoogleEvents);
+    }
   }catch(e){
     console.error(e);
     dayGoogleEvents = [];
@@ -1547,7 +1581,9 @@ function renderTimeline(){
     makeDraggable(card);
   });
 
-  const gEvents = (showGoogleCal && localStorage.getItem('google_was_connected')) ? dayGoogleEvents : [];
+  const importedGcalIds = new Set(tasks.map(t => t.gcalEventId).filter(Boolean));
+  const gEvents = (showGoogleCal && localStorage.getItem('google_was_connected')) ? dayGoogleEvents.filter(ev => !importedGcalIds.has(ev.id)) : [];
+  
   timelineEl.classList.toggle('has-gcal', gEvents.length > 0);
   gEvents.forEach(ev => {
     const d = new Date(ev.start);
@@ -1997,6 +2033,7 @@ function initGoogleAuth(){
     renderAccountUI(true, cached);
     requestGoogleToken(false).then(token => {
       fetchAndStoreProfile(token).catch(()=>{});
+      backgroundSyncGoogle();
     }).catch(()=>{});
   } else {
     renderAccountUI(false, null);
@@ -2061,6 +2098,7 @@ gAccountBtn.addEventListener('click', async ()=>{
   try{
     const token = await requestGoogleToken(true);
     await fetchAndStoreProfile(token);
+    if(autoSyncEnabled) backgroundSyncGoogle();
   }catch(e){
     console.error(e);
   }
@@ -2252,6 +2290,10 @@ autoSyncCheckbox.checked = autoSyncEnabled;
 autoSyncCheckbox.addEventListener('change', ()=>{
   autoSyncEnabled = autoSyncCheckbox.checked;
   localStorage.setItem('auto_sync_enabled', autoSyncEnabled ? '1' : '0');
+  if(autoSyncEnabled) {
+    backgroundSyncGoogle();
+    ensureDayGoogleEvents();
+  }
 });
 
 showGoogleCheckbox.checked = showGoogleCal;
