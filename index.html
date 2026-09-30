@@ -222,12 +222,14 @@
   .tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
   .tray::-webkit-scrollbar{display:none;}
   
-  /* Ajout du support tactile sur les "chips" */
+  /* CHIP AVEC REAJUSTEMENT POUR LE LONG PRESS DRAG (tactile) */
   .chip{
     flex:0 0 auto; display:flex; align-items:center; gap:7px; background:var(--card);
     border:1px solid var(--line); border-radius:20px; padding:8px 12px 8px 10px; font-size:13px; white-space:nowrap;
-    cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none;
+    cursor: grab; user-select: none; -webkit-user-select: none;
+    transition: opacity 0.2s, transform 0.2s;
   }
+  .chip.dragging-origin { opacity: 0.3; transform: scale(0.95); }
   .chip:active { cursor: grabbing; }
   .chip.done{opacity:.5;}
   .chip .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); flex:0 0 auto;}
@@ -243,7 +245,7 @@
   .hour-row{ position:relative; height:56px; display:flex; border-top:1px solid var(--line); }
   .hour-row:first-child{border-top:none;}
   .hour-label{ flex:0 0 52px; font-size:11px; color:var(--ink-faint); padding:4px 0 0 12px; font-variant-numeric: tabular-nums; }
-  .lane{ flex:1; position:relative; }
+  .lane{ flex:1; position:relative; transition: background 0.2s; }
   .lane.drag-over { background: var(--accent-soft); opacity: 0.6; }
 
   .task-card{
@@ -389,7 +391,7 @@
 </head>
 <body>
 
-  <!-- ÉCRAN DE CHARGEMENT AVEC TON LOGO EXHAUSTIF ET BARRE DE PROGRESSION -->
+  <!-- ÉCRAN DE CHARGEMENT -->
   <div id="splashScreen">
     <div class="splash-logo-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -661,7 +663,7 @@
 </nav>
 
 <script>
-/* Gestion de l'écran de chargement avec ton logo (1.4 seconde de fondu fluide) */
+/* Gestion de l'écran de chargement */
 window.addEventListener('load', () => {
   const splash = document.getElementById('splashScreen');
   if(splash) {
@@ -1204,7 +1206,7 @@ function renderTray(){
   const unscheduled = tasks.filter(t=>!t.due);
   if(unscheduled.length === 0){ trayWrap.innerHTML=''; return; }
   trayWrap.innerHTML = `
-    <div class="section-title">Sans horaire (Glissez sur la timeline)</div>
+    <div class="section-title">Sans horaire (Restez appuyé pour glisser)</div>
     <div class="tray">
       ${unscheduled.map(t => `
         <div class="chip task-row ${t.done?'done':''}" data-id="${t.id}" draggable="true">
@@ -1309,12 +1311,12 @@ async function handleTaskDrop(taskId, hourStr) {
   schedulePushReminder(task);
 }
 
-/* NOUVEAU MOTEUR DRAG AND DROP TACTILE (ET SOURIS) */
+/* ---------- MOTEUR DRAG AND DROP TACTILE (APPUI LONG) ---------- */
 function initDragAndDrop() {
   const chips = document.querySelectorAll('.chip[draggable="true"]');
   const lanes = document.querySelectorAll('.lane');
 
-  /* Ordinateur : Drag & Drop HTML5 classique */
+  /* Ordinateur (Souris) */
   chips.forEach(chip => {
     chip.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', chip.dataset.id);
@@ -1337,69 +1339,98 @@ function initDragAndDrop() {
     });
   });
 
-  /* iPhone / Mobile : Simulation du Drag & Drop via Touch Events */
+  /* Smartphone (Tactile iOS/Android) */
+  let dragTimer = null;
+  let isDragging = false;
   let activeClone = null;
   let dragTaskId = null;
   let currentLane = null;
 
   chips.forEach(chip => {
     chip.addEventListener('touchstart', (e) => {
+      if (e.target.closest('button')) return; // Ignore si on clique sur un bouton
+      
       const touch = e.touches[0];
       dragTaskId = chip.dataset.id;
-      
-      // Crée une copie visuelle de la tâche qui va suivre le doigt
-      activeClone = chip.cloneNode(true);
-      activeClone.style.position = 'fixed';
-      activeClone.style.zIndex = '9999';
-      activeClone.style.opacity = '0.85';
-      activeClone.style.pointerEvents = 'none'; // Très important, pour pouvoir "voir" ce qu'il y a en dessous du doigt
-      activeClone.style.margin = '0';
-      
-      const rect = chip.getBoundingClientRect();
-      activeClone.style.width = rect.width + 'px';
-      activeClone.style.left = (touch.clientX - rect.width / 2) + 'px';
-      activeClone.style.top = (touch.clientY - rect.height / 2) + 'px';
-      
-      document.body.appendChild(activeClone);
+      isDragging = false;
+
+      dragTimer = setTimeout(() => {
+        isDragging = true;
+        if (navigator.vibrate) navigator.vibrate(50); // Retour haptique si supporté
+        
+        chip.classList.add('dragging-origin');
+        
+        activeClone = chip.cloneNode(true);
+        activeClone.style.position = 'fixed';
+        activeClone.style.zIndex = '99999';
+        activeClone.style.opacity = '0.95';
+        activeClone.style.pointerEvents = 'none';
+        activeClone.style.margin = '0';
+        activeClone.style.boxShadow = '0 12px 30px rgba(0,0,0,0.3)';
+        activeClone.style.transform = 'scale(1.05)';
+        activeClone.style.transition = 'none';
+        
+        const rect = chip.getBoundingClientRect();
+        activeClone.style.width = rect.width + 'px';
+        activeClone.style.left = (touch.clientX - rect.width / 2) + 'px';
+        activeClone.style.top = (touch.clientY - rect.height / 2) + 'px';
+        
+        document.body.appendChild(activeClone);
+        document.body.style.overflow = 'hidden'; // Bloque le scroll
+      }, 400); // 400 millisecondes pour activer le drag
     }, {passive: false});
 
     chip.addEventListener('touchmove', (e) => {
-      if (!activeClone) return;
-      e.preventDefault(); // Empêche l'iPhone de scroller pendant qu'on glisse la tâche
-      
-      const touch = e.touches[0];
-      activeClone.style.left = (touch.clientX - activeClone.offsetWidth / 2) + 'px';
-      activeClone.style.top = (touch.clientY - activeClone.offsetHeight / 2) + 'px';
-      
-      // Cherche si le doigt survole une ligne de la timeline
-      const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-      const laneBelow = elemBelow ? elemBelow.closest('.lane') : null;
-      
-      if (currentLane && currentLane !== laneBelow) {
-        currentLane.classList.remove('drag-over');
+      if (!isDragging) {
+        clearTimeout(dragTimer); // Si on glisse avant 400ms, c'est un scroll horizontal normal
+        return;
       }
-      if (laneBelow) {
-        laneBelow.classList.add('drag-over');
-        currentLane = laneBelow;
-      } else {
-        currentLane = null;
+      
+      e.preventDefault(); // Stop le scroll vertical pendant qu'on drag
+      const touch = e.touches[0];
+      
+      if (activeClone) {
+        activeClone.style.left = (touch.clientX - activeClone.offsetWidth / 2) + 'px';
+        activeClone.style.top = (touch.clientY - activeClone.offsetHeight / 2) + 'px';
+        
+        const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+        const laneBelow = elemBelow ? elemBelow.closest('.lane') : null;
+        
+        if (currentLane && currentLane !== laneBelow) {
+          currentLane.classList.remove('drag-over');
+        }
+        if (laneBelow) {
+          laneBelow.classList.add('drag-over');
+          currentLane = laneBelow;
+        } else {
+          currentLane = null;
+        }
       }
     }, {passive: false});
 
-    chip.addEventListener('touchend', async (e) => {
-      if (!activeClone) return;
+    const endDrag = async (e) => {
+      clearTimeout(dragTimer);
+      chip.classList.remove('dragging-origin');
       
-      activeClone.remove();
-      activeClone = null;
+      if (!isDragging) return;
+      isDragging = false;
+      document.body.style.overflow = '';
+      
+      if (activeClone) {
+        activeClone.remove();
+        activeClone = null;
+      }
       
       if (currentLane && dragTaskId) {
         currentLane.classList.remove('drag-over');
-        // Si on lâche sur une heure, on déplace la tâche !
         await handleTaskDrop(dragTaskId, currentLane.dataset.hour);
         currentLane = null;
       }
       dragTaskId = null;
-    });
+    };
+
+    chip.addEventListener('touchend', endDrag);
+    chip.addEventListener('touchcancel', endDrag);
   });
 }
 
