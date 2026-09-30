@@ -85,6 +85,7 @@
   [data-theme="glass"] .modern-toggle,
   [data-theme="glass"] input[type=text],
   [data-theme="glass"] input[type=email],
+  [data-theme="glass"] input[type=tel],
   [data-theme="glass"] input[type=datetime-local],
   [data-theme="glass"] select,
   [data-theme="glass"] textarea,
@@ -428,11 +429,11 @@
   .account-note{ font-size:12px; color:var(--ink-soft); line-height:1.5; text-align:center; padding:0 8px; }
   .meet-error{ font-size:12.5px; color:var(--rust); text-align:center; margin-top:10px; }
 
-  input[type=text], input[type=email], input[type=datetime-local], select, textarea{
+  input[type=text], input[type=email], input[type=tel], input[type=datetime-local], select, textarea{
     border:1px solid var(--line); background:var(--card); border-radius:10px;
-    font-family:'Inter',sans-serif; font-size:15px; color:var(--ink); padding:12px 13px; width: 100%;
+    font-family:'Inter',sans-serif; font-size:15px; color:var(--ink); padding:12px 13px; width: 100%; box-sizing: border-box;
   }
-  input[type=text]:focus, input[type=email]:focus, input[type=datetime-local]:focus, select:focus, textarea:focus{ outline:2px solid var(--accent-soft); }
+  input[type=text]:focus, input[type=email]:focus, input[type=tel]:focus, input[type=datetime-local]:focus, select:focus, textarea:focus{ outline:2px solid var(--accent-soft); }
   
   .qa-row { display: flex; gap: 10px; margin-bottom: 12px; }
   .qa-row input[type=datetime-local] { flex: 1; margin-bottom: 0; }
@@ -567,9 +568,10 @@
   }
   .crm-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
   .crm-name { font-weight: 600; font-size: 14px; color: var(--ink); }
-  .crm-badge { background: var(--card-soft); color: var(--ink-soft); padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .crm-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .crm-contact-info { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; line-height: 1.5; }
   .crm-notes { font-size: 13px; color: var(--ink-soft); line-height: 1.4; white-space: pre-wrap; margin: 0; }
-  .crm-footer { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 500; }
+  .crm-footer { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
   
   .crm-edit { position: absolute; right: 32px; bottom: 8px; background: none; border: none; color: var(--accent); font-size: 14px; cursor: pointer; padding: 0 4px; }
   .crm-del { position: absolute; right: 8px; bottom: 8px; background: none; border: none; color: var(--rust); font-size: 18px; cursor: pointer; padding: 0 4px; }
@@ -911,6 +913,13 @@
   <div class="crm-content">
     <form id="crm-form" class="crm-form">
       <input type="text" id="crm-name" placeholder="Nom du contact ou projet" required />
+      
+      <!-- NOUVEAUX CHAMPS EMAIL ET TÉLÉPHONE -->
+      <div style="display:flex; gap:8px;">
+        <input type="email" id="crm-contact-email" placeholder="Email" style="flex:1;" />
+        <input type="tel" id="crm-contact-phone" placeholder="Téléphone" style="flex:1;" />
+      </div>
+
       <div class="qa-row" style="margin-bottom:0;">
         <input type="datetime-local" id="crm-date" required />
       </div>
@@ -918,12 +927,12 @@
       
       <div class="crm-toggles">
         <label class="modern-toggle small">
-          <span style="display:flex; align-items:center; gap:8px;">📧 Auto Email</span>
+          <span style="display:flex; align-items:center; gap:8px;">📧 Prép. Email</span>
           <input type="checkbox" id="crm-email" />
           <div class="switch-track"><div class="switch-thumb"></div></div>
         </label>
         <label class="modern-toggle small">
-          <span style="display:flex; align-items:center; gap:8px;">📱 Auto SMS</span>
+          <span style="display:flex; align-items:center; gap:8px;">📱 SMS / Appel</span>
           <input type="checkbox" id="crm-sms" />
           <div class="switch-track"><div class="switch-thumb"></div></div>
         </label>
@@ -1122,8 +1131,8 @@ const WMO_WEATHER_ICONS = {
   0: '☀', 1: '🌤️', 2: '⛅', 3: '☁️',
   45: '🌫', 48: '🌫',
   51: '🌦️', 53: '🌦️', 55: '🌧️',
-  61: '🌧️️', 63: '🌧️', 65: '🌧',
-  71: '🌨️', 73: '🌨️️', 75: '❄️', 77: '❄️',
+  61: '🌧', 63: '🌧️', 65: '🌧',
+  71: '🌨️', 73: '🌨', 75: '❄️', 77: '❄️',
   80: '🌦️', 81: '🌧️', 82: '🌧️',
   85: '🌨️', 86: '❄️',
   95: '⛈️', 96: '⛈️', 99: '⛈️'
@@ -2761,17 +2770,37 @@ function renderCRM() {
     const dateObj = new Date(c.date);
     const dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' · ' + dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     
+    let infoHtml = '';
+    if(c.contactEmail || c.contactPhone) {
+      infoHtml = `<div class="crm-contact-info">
+        ${c.contactEmail ? `✉️ ${escapeHtml(c.contactEmail)}<br>` : ''}
+        ${c.contactPhone ? `📞 ${escapeHtml(c.contactPhone)}` : ''}
+      </div>`;
+    }
+
+    let emailBadge = c.autoEmail ? 
+      (c.contactEmail ? `<a href="mailto:${escapeHtml(c.contactEmail)}" class="crm-badge" style="background:#e5f1ff;color:#007aff;text-decoration:none;">📧 Rédiger Mail</a>` : `<span class="crm-badge" style="background:var(--card-soft);color:var(--ink-soft);">📧 Email (sans adresse)</span>`) : '';
+      
+    let smsBadge = c.autoSms ? 
+      (c.contactPhone ? `<a href="sms:${escapeHtml(c.contactPhone)}" class="crm-badge" style="background:#e5f1ff;color:#007aff;text-decoration:none;">💬 Envoyer SMS</a>` : `<span class="crm-badge" style="background:var(--card-soft);color:var(--ink-soft);">📱 SMS (sans n°)</span>`) : '';
+
+    let callBadge = c.contactPhone ? `<a href="tel:${escapeHtml(c.contactPhone)}" class="crm-badge" style="background:#e8f4fd;color:#007aff;text-decoration:none;">📞 Appeler</a>` : '';
+
+    let physiqueBadge = c.autoPhysique ? `<span class="crm-badge" style="background:var(--card-soft);color:var(--ink-soft);">🤝 Physique</span>` : '';
+
     return `
       <div class="crm-card">
         <div class="crm-card-header">
           <div class="crm-name">${escapeHtml(c.name)}</div>
-          <div class="crm-badge">⏳ ${dateStr}</div>
+          <div class="crm-badge" style="background:var(--card-soft);color:var(--ink-soft);">⏳ ${dateStr}</div>
         </div>
+        ${infoHtml}
         <p class="crm-notes">${escapeHtml(c.notes)}</p>
         <div class="crm-footer">
-          ${c.autoEmail ? '<span>📧 Email auto</span>' : ''}
-          ${c.autoSms ? '<span>📱 SMS auto</span>' : ''}
-          ${c.autoPhysique ? '<span>🤝 Physique</span>' : ''}
+          ${emailBadge}
+          ${smsBadge}
+          ${callBadge}
+          ${physiqueBadge}
         </div>
         <button class="crm-edit" onclick="editCRM('${c.id}')">✏️</button>
         <button class="crm-del" onclick="deleteCRM('${c.id}')">×</button>
@@ -2786,6 +2815,8 @@ window.editCRM = function(id) {
   
   editingCrmId = id;
   document.getElementById('crm-name').value = found.name || '';
+  document.getElementById('crm-contact-email').value = found.contactEmail || '';
+  document.getElementById('crm-contact-phone').value = found.contactPhone || '';
   document.getElementById('crm-date').value = found.date || '';
   document.getElementById('crm-notes').value = found.notes || '';
   document.getElementById('crm-email').checked = !!found.autoEmail;
@@ -2795,7 +2826,6 @@ window.editCRM = function(id) {
   document.getElementById('crm-submit-btn').textContent = 'Modifier le suivi';
   document.getElementById('crm-cancel-btn').style.display = 'block';
   
-  // Fait scroller en haut pour voir le formulaire
   document.querySelector('.crm-content').scrollTo({ top: 0, behavior: 'smooth' });
   document.getElementById('crm-name').focus();
 };
@@ -2819,6 +2849,8 @@ if(crmForm) {
   crmForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('crm-name').value.trim();
+    const contactEmail = document.getElementById('crm-contact-email').value.trim();
+    const contactPhone = document.getElementById('crm-contact-phone').value.trim();
     const date = document.getElementById('crm-date').value;
     const notes = document.getElementById('crm-notes').value.trim();
     const autoEmail = document.getElementById('crm-email').checked;
@@ -2829,6 +2861,8 @@ if(crmForm) {
       const found = crmData.find(c => c.id === editingCrmId);
       if (found) {
         found.name = name;
+        found.contactEmail = contactEmail;
+        found.contactPhone = contactPhone;
         found.date = date;
         found.notes = notes;
         found.autoEmail = autoEmail;
@@ -2839,7 +2873,7 @@ if(crmForm) {
     } else {
       const contact = {
         id: uid(),
-        name, date, notes, autoEmail, autoSms, autoPhysique
+        name, contactEmail, contactPhone, date, notes, autoEmail, autoSms, autoPhysique
       };
       crmData.push(contact);
       crmForm.reset();
