@@ -222,15 +222,18 @@
   .tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
   .tray::-webkit-scrollbar{display:none;}
   
-  /* CHIP AVEC REAJUSTEMENT POUR LE LONG PRESS DRAG (tactile) */
+  /* DRAGGABLE ITEMS (Plateau + Timeline) */
+  .draggable-item {
+    cursor: grab; user-select: none; -webkit-user-select: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .draggable-item:active { cursor: grabbing; }
+  .draggable-item.dragging-origin { opacity: 0.4; transform: scale(0.95); }
+
   .chip{
     flex:0 0 auto; display:flex; align-items:center; gap:7px; background:var(--card);
     border:1px solid var(--line); border-radius:20px; padding:8px 12px 8px 10px; font-size:13px; white-space:nowrap;
-    cursor: grab; user-select: none; -webkit-user-select: none;
-    transition: opacity 0.2s, transform 0.2s;
   }
-  .chip.dragging-origin { opacity: 0.3; transform: scale(0.95); }
-  .chip:active { cursor: grabbing; }
   .chip.done{opacity:.5;}
   .chip .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); flex:0 0 auto;}
   .chip .txt.done{text-decoration:line-through;}
@@ -391,7 +394,7 @@
 </head>
 <body>
 
-  <!-- ÉCRAN DE CHARGEMENT -->
+  <!-- ÉCRAN DE CHARGEMENT AVEC TON LOGO EXHAUSTIF ET BARRE DE PROGRESSION -->
   <div id="splashScreen">
     <div class="splash-logo-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -991,6 +994,22 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
 });
 
+function attachLaneDropEvents(lane) {
+  lane.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    lane.classList.add('drag-over');
+  });
+  lane.addEventListener('dragleave', () => {
+    lane.classList.remove('drag-over');
+  });
+  lane.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    lane.classList.remove('drag-over');
+    const taskId = e.dataTransfer.getData('text/plain');
+    await handleTaskDrop(taskId, lane.dataset.hour);
+  });
+}
+
 function buildTimelineGrid(){
   let html = '';
   for(let h=START_HOUR; h<=END_HOUR; h++){
@@ -998,7 +1017,9 @@ function buildTimelineGrid(){
     html += `<div class="hour-row" data-hour="${h}"><div class="hour-label">${label}</div><div class="lane" data-hour="${h}"></div></div>`;
   }
   timelineEl.innerHTML = html;
-  initDragAndDrop();
+  
+  const lanes = timelineEl.querySelectorAll('.lane');
+  lanes.forEach(attachLaneDropEvents);
 }
 
 function localDateKey(d){
@@ -1202,6 +1223,107 @@ function renderRing(){
   ringNum.textContent = `${done}/${total}`;
 }
 
+function makeDraggable(item) {
+  if (item.dataset.dragInit) return;
+  item.dataset.dragInit = '1';
+
+  item.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', item.dataset.id);
+  });
+
+  let dragTimer = null;
+  let isDragging = false;
+  let activeClone = null;
+  let dragTaskId = null;
+  let currentLane = null;
+
+  item.addEventListener('touchstart', (e) => {
+    if (e.target.closest('button')) return;
+    
+    const touch = e.touches[0];
+    dragTaskId = item.dataset.id;
+    isDragging = false;
+
+    dragTimer = setTimeout(() => {
+      isDragging = true;
+      if (navigator.vibrate) navigator.vibrate(50);
+      
+      item.classList.add('dragging-origin');
+      
+      activeClone = item.cloneNode(true);
+      activeClone.style.position = 'fixed';
+      activeClone.style.zIndex = '99999';
+      activeClone.style.opacity = '0.95';
+      activeClone.style.pointerEvents = 'none';
+      activeClone.style.margin = '0';
+      activeClone.style.boxShadow = '0 12px 30px rgba(0,0,0,0.3)';
+      activeClone.style.transform = 'scale(1.05)';
+      activeClone.style.transition = 'none';
+      
+      const rect = item.getBoundingClientRect();
+      activeClone.style.width = rect.width + 'px';
+      activeClone.style.right = 'auto'; 
+      
+      activeClone.style.left = (touch.clientX - rect.width / 2) + 'px';
+      activeClone.style.top = (touch.clientY - rect.height / 2) + 'px';
+      
+      document.body.appendChild(activeClone);
+      document.body.style.overflow = 'hidden';
+    }, 400); 
+  }, {passive: false});
+
+  item.addEventListener('touchmove', (e) => {
+    if (!isDragging) {
+      clearTimeout(dragTimer);
+      return;
+    }
+    e.preventDefault(); 
+    const touch = e.touches[0];
+    
+    if (activeClone) {
+      activeClone.style.left = (touch.clientX - activeClone.offsetWidth / 2) + 'px';
+      activeClone.style.top = (touch.clientY - activeClone.offsetHeight / 2) + 'px';
+      
+      const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+      const laneBelow = elemBelow ? elemBelow.closest('.lane') : null;
+      
+      if (currentLane && currentLane !== laneBelow) {
+        currentLane.classList.remove('drag-over');
+      }
+      if (laneBelow) {
+        laneBelow.classList.add('drag-over');
+        currentLane = laneBelow;
+      } else {
+        currentLane = null;
+      }
+    }
+  }, {passive: false});
+
+  const endDrag = async (e) => {
+    clearTimeout(dragTimer);
+    item.classList.remove('dragging-origin');
+    
+    if (!isDragging) return;
+    isDragging = false;
+    document.body.style.overflow = '';
+    
+    if (activeClone) {
+      activeClone.remove();
+      activeClone = null;
+    }
+    
+    if (currentLane && dragTaskId) {
+      currentLane.classList.remove('drag-over');
+      await handleTaskDrop(dragTaskId, currentLane.dataset.hour);
+      currentLane = null;
+    }
+    dragTaskId = null;
+  };
+
+  item.addEventListener('touchend', endDrag);
+  item.addEventListener('touchcancel', endDrag);
+}
+
 function renderTray(){
   const unscheduled = tasks.filter(t=>!t.due);
   if(unscheduled.length === 0){ trayWrap.innerHTML=''; return; }
@@ -1209,7 +1331,7 @@ function renderTray(){
     <div class="section-title">Sans horaire (Restez appuyé pour glisser)</div>
     <div class="tray">
       ${unscheduled.map(t => `
-        <div class="chip task-row ${t.done?'done':''}" data-id="${t.id}" draggable="true">
+        <div class="chip task-row draggable-item ${t.done?'done':''}" data-id="${t.id}" draggable="true">
           <button class="check-btn" data-action="toggle" data-id="${t.id}" style="all:unset;cursor:pointer;display:flex;">
             <span class="dot" style="background:${t.done ? 'var(--sage)':'var(--accent)'};"></span>
           </button>
@@ -1219,7 +1341,9 @@ function renderTray(){
       `).join('')}
     </div>
   `;
-  initDragAndDrop();
+  
+  const chips = trayWrap.querySelectorAll('.draggable-item');
+  chips.forEach(makeDraggable);
 }
 
 function renderTimeline(){
@@ -1247,9 +1371,10 @@ function renderTimeline(){
     }
     
     const card = document.createElement('div');
-    card.className = `task-card task-row ${t.done?'done':''} ${late?'late':''}`;
+    card.className = `task-card task-row draggable-item ${t.done?'done':''} ${late?'late':''}`;
     card.style.top = minuteOffset + 'px';
     card.dataset.id = t.id;
+    card.draggable = true;
     card.innerHTML = `
       <button class="task-check ${t.done?'done':''}" data-action="toggle" data-id="${t.id}"></button>
       <div class="task-info">
@@ -1259,6 +1384,7 @@ function renderTimeline(){
       <button class="task-del" data-action="delete" data-id="${t.id}">×</button>
     `;
     lane.appendChild(card);
+    makeDraggable(card);
   });
 
   const gEvents = (showGoogleCal && localStorage.getItem('google_was_connected')) ? dayGoogleEvents : [];
@@ -1309,129 +1435,6 @@ async function handleTaskDrop(taskId, hourStr) {
   await saveTask(task);
   syncTaskReminder(task);
   schedulePushReminder(task);
-}
-
-/* ---------- MOTEUR DRAG AND DROP TACTILE (APPUI LONG) ---------- */
-function initDragAndDrop() {
-  const chips = document.querySelectorAll('.chip[draggable="true"]');
-  const lanes = document.querySelectorAll('.lane');
-
-  /* Ordinateur (Souris) */
-  chips.forEach(chip => {
-    chip.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', chip.dataset.id);
-    });
-  });
-
-  lanes.forEach(lane => {
-    lane.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      lane.classList.add('drag-over');
-    });
-    lane.addEventListener('dragleave', () => {
-      lane.classList.remove('drag-over');
-    });
-    lane.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      lane.classList.remove('drag-over');
-      const taskId = e.dataTransfer.getData('text/plain');
-      await handleTaskDrop(taskId, lane.dataset.hour);
-    });
-  });
-
-  /* Smartphone (Tactile iOS/Android) */
-  let dragTimer = null;
-  let isDragging = false;
-  let activeClone = null;
-  let dragTaskId = null;
-  let currentLane = null;
-
-  chips.forEach(chip => {
-    chip.addEventListener('touchstart', (e) => {
-      if (e.target.closest('button')) return; // Ignore si on clique sur un bouton
-      
-      const touch = e.touches[0];
-      dragTaskId = chip.dataset.id;
-      isDragging = false;
-
-      dragTimer = setTimeout(() => {
-        isDragging = true;
-        if (navigator.vibrate) navigator.vibrate(50); // Retour haptique si supporté
-        
-        chip.classList.add('dragging-origin');
-        
-        activeClone = chip.cloneNode(true);
-        activeClone.style.position = 'fixed';
-        activeClone.style.zIndex = '99999';
-        activeClone.style.opacity = '0.95';
-        activeClone.style.pointerEvents = 'none';
-        activeClone.style.margin = '0';
-        activeClone.style.boxShadow = '0 12px 30px rgba(0,0,0,0.3)';
-        activeClone.style.transform = 'scale(1.05)';
-        activeClone.style.transition = 'none';
-        
-        const rect = chip.getBoundingClientRect();
-        activeClone.style.width = rect.width + 'px';
-        activeClone.style.left = (touch.clientX - rect.width / 2) + 'px';
-        activeClone.style.top = (touch.clientY - rect.height / 2) + 'px';
-        
-        document.body.appendChild(activeClone);
-        document.body.style.overflow = 'hidden'; // Bloque le scroll
-      }, 400); // 400 millisecondes pour activer le drag
-    }, {passive: false});
-
-    chip.addEventListener('touchmove', (e) => {
-      if (!isDragging) {
-        clearTimeout(dragTimer); // Si on glisse avant 400ms, c'est un scroll horizontal normal
-        return;
-      }
-      
-      e.preventDefault(); // Stop le scroll vertical pendant qu'on drag
-      const touch = e.touches[0];
-      
-      if (activeClone) {
-        activeClone.style.left = (touch.clientX - activeClone.offsetWidth / 2) + 'px';
-        activeClone.style.top = (touch.clientY - activeClone.offsetHeight / 2) + 'px';
-        
-        const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-        const laneBelow = elemBelow ? elemBelow.closest('.lane') : null;
-        
-        if (currentLane && currentLane !== laneBelow) {
-          currentLane.classList.remove('drag-over');
-        }
-        if (laneBelow) {
-          laneBelow.classList.add('drag-over');
-          currentLane = laneBelow;
-        } else {
-          currentLane = null;
-        }
-      }
-    }, {passive: false});
-
-    const endDrag = async (e) => {
-      clearTimeout(dragTimer);
-      chip.classList.remove('dragging-origin');
-      
-      if (!isDragging) return;
-      isDragging = false;
-      document.body.style.overflow = '';
-      
-      if (activeClone) {
-        activeClone.remove();
-        activeClone = null;
-      }
-      
-      if (currentLane && dragTaskId) {
-        currentLane.classList.remove('drag-over');
-        await handleTaskDrop(dragTaskId, currentLane.dataset.hour);
-        currentLane = null;
-      }
-      dragTaskId = null;
-    };
-
-    chip.addEventListener('touchend', endDrag);
-    chip.addEventListener('touchcancel', endDrag);
-  });
 }
 
 function scrollToNow(){
