@@ -223,7 +223,6 @@
   .panel{display:none;}
   .panel.active{display:block;}
 
-  /* BARRE DE FILTRE COULEUR */
   .tag-filter-bar {
     display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
     overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
@@ -409,7 +408,6 @@
   .detail-icon svg { width:18px; height:18px; vertical-align: middle; }
   .detail-desc{ font-size:14px; color:var(--ink-soft); line-height:1.5; padding:12px 0; border-top:1px solid var(--line); white-space:pre-wrap; }
   
-  /* CHECKLISTS (SOUS-TACHES) */
   .subtasks-section { border-top: 1px solid var(--line); padding: 14px 0 6px; }
   .subtasks-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); margin-bottom: 10px; display: flex; justify-content: space-between; }
   .subtask-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; }
@@ -519,12 +517,6 @@
       <button class="view-btn" data-view="month">Mois</button>
       <button class="view-btn" data-view="year">Année</button>
     </div>
-
-    <label class="modern-toggle small gcal">
-      <span style="color:var(--ink-soft);">Afficher mon agenda Google</span>
-      <input type="checkbox" id="showGoogleCheckbox">
-      <div class="switch-track"><div class="switch-thumb"></div></div>
-    </label>
 
     <div class="tag-filter-bar" id="tagFilterBar"></div>
 
@@ -882,10 +874,7 @@ let selectedDate = startOfDay(new Date());
 let weekAnchor = new Date(selectedDate);
 
 let autoSyncEnabled = localStorage.getItem('auto_sync_enabled') !== '0';
-let showGoogleCal = localStorage.getItem('show_google_cal') === '1';
-let dayGoogleEvents = [];
 let monthGoogleDots = new Set();
-let lastDayFetchKey = null;
 let lastMonthFetchKey = null;
 
 let viewMode = 'day';
@@ -919,7 +908,6 @@ const gName = document.getElementById('gName');
 const gEmail = document.getElementById('gEmail');
 const gAccountBtn = document.getElementById('gAccountBtn');
 const autoSyncCheckbox = document.getElementById('autoSyncCheckbox');
-const showGoogleCheckbox = document.getElementById('showGoogleCheckbox');
 const qaMeetCheckbox = document.getElementById('qaMeetCheckbox');
 const qaMeetFields = document.getElementById('qaMeetFields');
 const qaMeetEmailInput = document.getElementById('qaMeetEmailInput');
@@ -961,7 +949,6 @@ const qaCancelBtn = document.getElementById('qaCancelBtn');
 
 const TAB_TITLES = { today: "Aujourd'hui", tasks: 'Tâches', stats: 'Bilan', account: 'Compte' };
 
-/* GESTION DES FILTRES COULEUR */
 function renderTagFilterBar() {
   const colorKeys = ['all', 'default', 'red', 'blue', 'green', 'yellow', 'purple'];
   tagFilterBar.innerHTML = colorKeys.map(k => {
@@ -1360,33 +1347,8 @@ async function backgroundSyncGoogle() {
   } catch(e) { console.error("Erreur import auto:", e); }
 }
 
-async function ensureDayGoogleEvents(){
-  if(!showGoogleCal || !localStorage.getItem('google_was_connected')){
-    if(dayGoogleEvents.length){ dayGoogleEvents = []; renderTimeline(); }
-    lastDayFetchKey = null;
-    return;
-  }
-  const key = localDateKey(selectedDate);
-  if(key === lastDayFetchKey) return;
-  lastDayFetchKey = key;
-  try{
-    const dayStart = new Date(selectedDate); dayStart.setHours(0,0,0,0);
-    const dayEnd = new Date(selectedDate); dayEnd.setHours(23,59,59,999);
-    dayGoogleEvents = await fetchGoogleEventsRange(dayStart.toISOString(), dayEnd.toISOString());
-    
-    if(autoSyncEnabled) {
-      await importGoogleEventsToTasks(dayGoogleEvents);
-    }
-  }catch(e){
-    console.error(e);
-    dayGoogleEvents = [];
-    lastDayFetchKey = null;
-  }
-  renderTimeline();
-}
-
 async function ensureMonthGoogleDots(){
-  if(!showGoogleCal || !localStorage.getItem('google_was_connected')){
+  if(!localStorage.getItem('google_was_connected')){
     if(monthGoogleDots.size){ monthGoogleDots = new Set(); renderMonthGrid(); }
     lastMonthFetchKey = null;
     return;
@@ -1422,7 +1384,6 @@ function renderAll(){
   }
   renderMonthGrid();
   renderYearGrid();
-  ensureDayGoogleEvents();
   ensureMonthGoogleDots();
 }
 
@@ -1462,13 +1423,11 @@ function renderMonthGrid(){
     const isSelected = d.getTime() === selectedDate.getTime();
     const isPast = d.getTime() < today.getTime() && !isToday;
     const hasTasks = tasks.some(t => t.due && isSameDay(new Date(t.due), d));
-    const hasGoogle = showGoogleCal && monthGoogleDots.has(localDateKey(d));
     html += `
       <button class="month-cell ${outside?'outside':''} ${isToday?'today':''} ${isSelected?'selected':''} ${isPast?'past':''}" data-date="${d.getTime()}">
         <div class="num">${d.getDate()}</div>
         <div style="display:flex;gap:3px;height:4px;">
           <div class="dot-indicator ${hasTasks?'':'empty'}"></div>
-          ${hasGoogle ? '<div class="dot-google"></div>' : ''}
         </div>
       </button>
     `;
@@ -1711,30 +1670,6 @@ function renderTimeline(){
     `;
     lane.appendChild(card);
     makeDraggable(card);
-  });
-
-  const importedGcalIds = new Set(tasks.map(t => t.gcalEventId).filter(Boolean));
-  const gEvents = (showGoogleCal && localStorage.getItem('google_was_connected') && !activeColorFilter) ? dayGoogleEvents.filter(ev => !importedGcalIds.has(ev.id)) : [];
-  
-  timelineEl.classList.toggle('has-gcal', gEvents.length > 0);
-  gEvents.forEach(ev => {
-    const d = new Date(ev.start);
-    const hour = Math.min(Math.max(d.getHours(), START_HOUR), END_HOUR);
-    const lane = laneByHour[hour];
-    if(!lane) return;
-    const minuteOffset = d.getHours() < START_HOUR ? 0 : (d.getHours() > END_HOUR ? 0 : d.getMinutes());
-    const card = document.createElement('a');
-    card.className = 'gcal-card';
-    card.style.top = minuteOffset + 'px';
-    card.href = ev.htmlLink || '#';
-    card.target = '_blank';
-    card.rel = 'noopener';
-    card.innerHTML = `
-      <span class="gcal-tag">G</span>
-      <span class="g-title">${escapeHtml(ev.title)}</span>
-      <span class="g-time">${fmtTime(ev.start)}</span>
-    `;
-    lane.appendChild(card);
   });
 
   const isViewingToday = isSameDay(selectedDate, now);
@@ -2241,9 +2176,7 @@ function initGoogleAuth(){
     renderAccountUI(false, null);
   }
   scheduleSilentRefresh();
-  lastDayFetchKey = null;
   lastMonthFetchKey = null;
-  ensureDayGoogleEvents();
   ensureMonthGoogleDots();
 }
 
@@ -2494,28 +2427,7 @@ autoSyncCheckbox.addEventListener('change', ()=>{
   localStorage.setItem('auto_sync_enabled', autoSyncEnabled ? '1' : '0');
   if(autoSyncEnabled) {
     backgroundSyncGoogle();
-    ensureDayGoogleEvents();
   }
-});
-
-showGoogleCheckbox.checked = showGoogleCal;
-showGoogleCheckbox.addEventListener('change', async ()=>{
-  showGoogleCal = showGoogleCheckbox.checked;
-  localStorage.setItem('show_google_cal', showGoogleCal ? '1' : '0');
-  lastDayFetchKey = null;
-  lastMonthFetchKey = null;
-  if(showGoogleCal && !localStorage.getItem('google_was_connected')){
-    try{
-      const token = await requestGoogleToken(true);
-      await fetchAndStoreProfile(token);
-    }catch(e){
-      console.error(e);
-      showGoogleCal = false;
-      showGoogleCheckbox.checked = false;
-      localStorage.setItem('show_google_cal', '0');
-    }
-  }
-  renderAll();
 });
 
 function setupNotifPrompt(){
