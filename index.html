@@ -111,6 +111,10 @@
     background: rgba(0,0,0,0.6);
     color: #fff;
   }
+  [data-theme="glass"] .mic-fab.listening {
+    background: rgba(231, 76, 60, 0.8);
+    border-color: rgba(231, 76, 60, 0.9);
+  }
 
   #splashScreen {
     position: fixed; inset: 0; background: #ECE3D0; z-index: 9999;
@@ -219,6 +223,25 @@
   .panel{display:none;}
   .panel.active{display:block;}
 
+  /* BARRE DE FILTRE COULEUR */
+  .tag-filter-bar {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+    overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+  }
+  .tag-filter-bar::-webkit-scrollbar { display: none; }
+  .tag-filter-chip {
+    display: flex; align-items: center; gap: 6px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 14px; padding: 4px 10px;
+    font-size: 11.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer;
+    flex: 0 0 auto; user-select: none; transition: all 0.2s ease;
+  }
+  .tag-filter-chip.active {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+  }
+  .tag-filter-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--fc); flex: 0 0 auto;
+  }
+
   .tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
   .tray::-webkit-scrollbar{display:none;}
   
@@ -255,8 +278,8 @@
     border-left:3px solid var(--task-c, var(--accent)); border-radius:10px; padding:7px 10px; font-size:13.5px;
     line-height:1.25; display:flex; align-items:center; gap:8px; box-shadow:0 1px 3px rgba(0,0,0,.08);
   }
-  .task-card.done{ border-left-color:var(--sage); opacity:.55; }
-  .task-card.late{border-left-color:var(--rust);}
+  .task-card.done{ border-left-color:var(--sage) !important; opacity:.55; }
+  .task-card.late{ border-left-color:var(--rust); }
   .task-check{ flex:0 0 auto; width:16px; height:16px; border-radius:50%; border:1.4px solid var(--ink-faint); background:transparent; cursor:pointer; position:relative; padding:0; }
   .task-check.done{background:var(--sage); border-color:var(--sage);}
   .task-check.done::after{
@@ -267,6 +290,7 @@
   .task-title{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .task-title.done{text-decoration:line-through; color:var(--ink-soft);}
   .task-time{font-size:10.5px; color:var(--ink-soft);}
+  .subtask-badge{font-size:10.5px; color:var(--ink-soft); font-weight:600; margin-left:4px;}
   .meet-link{color:var(--accent); text-decoration:none; font-weight:600;}
   .task-del{background:none; border:none; color:var(--ink-faint); font-size:15px; cursor:pointer; flex:0 0 auto; padding:0; line-height:1;}
 
@@ -359,7 +383,6 @@
   .qa-row input[type=datetime-local] { flex: 1; margin-bottom: 0; }
   .qa-row select { flex: 0 0 110px; margin-bottom: 0; }
 
-  /* SELECTEUR DE COULEURS */
   .color-picker { display: flex; gap: 12px; margin-bottom: 16px; padding: 4px 0; }
   .color-swatch { display: block; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; position: relative; flex: 0 0 auto; }
   .color-swatch input { display: none; }
@@ -370,7 +393,7 @@
   .btn-primary{background:var(--ink); color:var(--bg);}
   .btn-primary:disabled{opacity:.35;}
 
-  .detail-sheet{ padding-top:22px; }
+  .detail-sheet{ padding-top:22px; max-height:85vh; overflow-y:auto; }
   .detail-header{ display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; }
   .detail-check{ flex:0 0 auto; width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink-faint); background:transparent; cursor:pointer; margin-top:3px; padding:0; position:relative; }
   .detail-check.done{ background:var(--sage); border-color:var(--sage); }
@@ -385,6 +408,20 @@
   .detail-icon{ font-size:15px; width:20px; text-align:center; }
   .detail-icon svg { width:18px; height:18px; vertical-align: middle; }
   .detail-desc{ font-size:14px; color:var(--ink-soft); line-height:1.5; padding:12px 0; border-top:1px solid var(--line); white-space:pre-wrap; }
+  
+  /* CHECKLISTS (SOUS-TACHES) */
+  .subtasks-section { border-top: 1px solid var(--line); padding: 14px 0 6px; }
+  .subtasks-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .subtask-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; }
+  .subtask-check { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--ink-faint); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; flex: 0 0 auto; }
+  .subtask-check.done { background: var(--sage); border-color: var(--sage); color: var(--card); font-size: 12px; line-height: 1; }
+  .subtask-txt { flex: 1; }
+  .subtask-txt.done { text-decoration: line-through; color: var(--ink-soft); }
+  .subtask-del { background: none; border: none; color: var(--ink-faint); font-size: 16px; cursor: pointer; padding: 0; }
+  .subtask-form { display: flex; gap: 8px; margin-top: 10px; }
+  .subtask-input { flex: 1; padding: 8px 12px; font-size: 13.5px; border-radius: 8px; margin-bottom: 0; }
+  .subtask-add-btn { width: auto; padding: 8px 14px; font-size: 13.5px; border-radius: 8px; }
+
   .detail-actions{ display:flex; gap:10px; margin-top:20px; }
   .detail-actions .btn{ flex:1; }
   #detailDeleteBtn{ color:var(--rust); }
@@ -489,6 +526,8 @@
       <div class="switch-track"><div class="switch-thumb"></div></div>
     </label>
 
+    <div class="tag-filter-bar" id="tagFilterBar"></div>
+
     <div class="view-content" id="view-day">
       <div class="week-strip" id="weekStrip"></div>
       <div id="trayWrap"></div>
@@ -590,7 +629,7 @@
 </button>
 
 <div class="qa-backdrop" id="settingsBackdrop"></div>
-<div class="qa-sheet detail-sheet" id="settingsSheet" style="max-height: 85vh; overflow-y: auto;">
+<div class="qa-sheet detail-sheet" id="settingsSheet">
   <div class="detail-header" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
     <div class="detail-title" style="margin:0;">Paramètres</div>
     <button type="button" class="btn btn-ghost" id="settingsCloseBtn" style="width:auto; padding:6px 12px; margin:0;">Fermer</button>
@@ -712,6 +751,19 @@
     <a href="#" id="detailMeetLink" target="_blank" rel="noopener">Rejoindre le Google Meet</a>
   </div>
   <div class="detail-desc" id="detailDesc" style="display:none;"></div>
+  
+  <div class="subtasks-section">
+    <div class="subtasks-title">
+      <span>Sous-tâches</span>
+      <span id="subtasksRatio" style="color:var(--ink-faint);"></span>
+    </div>
+    <div id="subtasksList"></div>
+    <form id="subtaskForm" class="subtask-form">
+      <input type="text" id="subtaskInput" class="subtask-input" placeholder="Ajouter une étape..." autocomplete="off">
+      <button type="submit" class="btn btn-primary subtask-add-btn">+</button>
+    </form>
+  </div>
+
   <div class="detail-actions">
     <button type="button" class="btn btn-ghost" id="detailDeleteBtn">Supprimer</button>
     <button type="button" class="btn btn-primary" id="detailCloseBtn">Fermer</button>
@@ -823,6 +875,7 @@ const COLORS = {
 let tasks = [];
 let notifiedIds = new Set();
 let activeTab = 'today';
+let activeColorFilter = null;
 
 function startOfDay(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
 let selectedDate = startOfDay(new Date());
@@ -845,6 +898,7 @@ const timelineEl = document.getElementById('timeline');
 const timelineScroll = document.getElementById('timelineScroll');
 const weekStrip = document.getElementById('weekStrip');
 const trayWrap = document.getElementById('trayWrap');
+const tagFilterBar = document.getElementById('tagFilterBar');
 const viewDay = document.getElementById('view-day');
 const viewMonth = document.getElementById('view-month');
 const viewYear = document.getElementById('view-year');
@@ -888,6 +942,10 @@ const detailMeetLink = document.getElementById('detailMeetLink');
 const detailDesc = document.getElementById('detailDesc');
 const detailDeleteBtn = document.getElementById('detailDeleteBtn');
 const detailCloseBtn = document.getElementById('detailCloseBtn');
+const subtasksList = document.getElementById('subtasksList');
+const subtasksRatio = document.getElementById('subtasksRatio');
+const subtaskForm = document.getElementById('subtaskForm');
+const subtaskInput = document.getElementById('subtaskInput');
 let detailTaskId = null;
 
 const quickFab = document.getElementById('quickFab');
@@ -902,6 +960,37 @@ const qaSubmitBtn = document.getElementById('qaSubmitBtn');
 const qaCancelBtn = document.getElementById('qaCancelBtn');
 
 const TAB_TITLES = { today: "Aujourd'hui", tasks: 'Tâches', stats: 'Bilan', account: 'Compte' };
+
+/* GESTION DES FILTRES COULEUR */
+function renderTagFilterBar() {
+  const colorKeys = ['all', 'default', 'red', 'blue', 'green', 'yellow', 'purple'];
+  tagFilterBar.innerHTML = colorKeys.map(k => {
+    if (k === 'all') {
+      const active = activeColorFilter === null ? 'active' : '';
+      return `<button type="button" class="tag-filter-chip ${active}" data-filter="all">Tous</button>`;
+    }
+    const active = activeColorFilter === k ? 'active' : '';
+    return `
+      <button type="button" class="tag-filter-chip ${active}" data-filter="${k}">
+        <span class="tag-filter-dot" style="--fc: ${COLORS[k]};"></span>
+      </button>
+    `;
+  }).join('');
+
+  tagFilterBar.querySelectorAll('.tag-filter-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.filter;
+      if (f === 'all' || activeColorFilter === f) {
+        activeColorFilter = null;
+      } else {
+        activeColorFilter = f;
+      }
+      renderTagFilterBar();
+      renderTray();
+      renderTimeline();
+    });
+  });
+}
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
@@ -1108,6 +1197,7 @@ function checkRecurringTasks() {
             remindBefore: t.remindBefore,
             repeat: t.repeat,
             color: t.color || 'default',
+            subtasks: t.subtasks ? t.subtasks.map(s => ({...s, done: false})) : [],
             done: false,
             createdAt: Date.now(),
             meetLink: null,
@@ -1243,6 +1333,7 @@ async function importGoogleEventsToTasks(events) {
         repeat: 'none',
         remindBefore: 15,
         color: 'default',
+        subtasks: [],
         done: false,
         createdAt: Date.now(),
         meetLink: ev.meetLink || ev.htmlLink,
@@ -1322,6 +1413,7 @@ async function ensureMonthGoogleDots(){
 function renderAll(){
   renderWeekStrip();
   renderRing();
+  renderTagFilterBar();
   renderTray();
   renderTimeline();
   if(activeTab === 'tasks') {
@@ -1546,7 +1638,10 @@ function makeDraggable(item) {
 }
 
 function renderTray(){
-  const unscheduled = tasks.filter(t=>!t.due);
+  let unscheduled = tasks.filter(t=>!t.due);
+  if(activeColorFilter) {
+    unscheduled = unscheduled.filter(t => (t.color || 'default') === activeColorFilter);
+  }
   if(unscheduled.length === 0){ trayWrap.innerHTML=''; return; }
   trayWrap.innerHTML = `
     <div class="section-title">Sans horaire (Restez appuyé pour glisser)</div>
@@ -1575,7 +1670,10 @@ function renderTimeline(){
   lanes.forEach(l => { laneByHour[h] = l; h++; });
 
   const now = new Date();
-  const todays = tasks.filter(t => t.due && isSameDay(new Date(t.due), selectedDate));
+  let todays = tasks.filter(t => t.due && isSameDay(new Date(t.due), selectedDate));
+  if(activeColorFilter) {
+    todays = todays.filter(t => (t.color || 'default') === activeColorFilter);
+  }
 
   todays.forEach(t => {
     const d = new Date(t.due);
@@ -1591,6 +1689,12 @@ function renderTimeline(){
        timeStr += ' - ' + fmtTime(endDate);
     }
     
+    let subBadge = '';
+    if(t.subtasks && t.subtasks.length > 0) {
+      const sDone = t.subtasks.filter(s => s.done).length;
+      subBadge = `<span class="subtask-badge">✓ ${sDone}/${t.subtasks.length}</span>`;
+    }
+    
     const card = document.createElement('div');
     card.className = `task-card task-row draggable-item ${t.done?'done':''} ${late?'late':''}`;
     card.style.top = minuteOffset + 'px';
@@ -1600,7 +1704,7 @@ function renderTimeline(){
     card.innerHTML = `
       <button class="task-check ${t.done?'done':''}" data-action="toggle" data-id="${t.id}"></button>
       <div class="task-info">
-        <div class="task-title ${t.done?'done':''}">${escapeHtml(t.text)}</div>
+        <div class="task-title ${t.done?'done':''}">${escapeHtml(t.text)}${subBadge}</div>
         <div class="task-time">${timeStr}${late?' · en retard':''}${t.meetLink ? ` · <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥 Meet</a>` : ''}</div>
       </div>
       <button class="task-del" data-action="delete" data-id="${t.id}">×</button>
@@ -1610,7 +1714,7 @@ function renderTimeline(){
   });
 
   const importedGcalIds = new Set(tasks.map(t => t.gcalEventId).filter(Boolean));
-  const gEvents = (showGoogleCal && localStorage.getItem('google_was_connected')) ? dayGoogleEvents.filter(ev => !importedGcalIds.has(ev.id)) : [];
+  const gEvents = (showGoogleCal && localStorage.getItem('google_was_connected') && !activeColorFilter) ? dayGoogleEvents.filter(ev => !importedGcalIds.has(ev.id)) : [];
   
   timelineEl.classList.toggle('has-gcal', gEvents.length > 0);
   gEvents.forEach(ev => {
@@ -1704,10 +1808,15 @@ function renderUpcoming(){
           const endDate = new Date(new Date(t.due).getTime() + t.duration * 60000);
           timeStr += ' - ' + fmtTime(endDate);
         }
+        let subBadge = '';
+        if(t.subtasks && t.subtasks.length > 0) {
+          const sDone = t.subtasks.filter(s => s.done).length;
+          subBadge = `<span class="subtask-badge">✓ ${sDone}/${t.subtasks.length}</span>`;
+        }
         return `
         <li class="agenda-item task-row" data-id="${t.id}" style="--task-c: ${COLORS[t.color] || 'var(--accent)'};">
           <span class="dot"></span>
-          <span class="txt">${escapeHtml(t.text)}${t.meetLink ? ` <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥</a>` : ''}</span>
+          <span class="txt">${escapeHtml(t.text)}${subBadge}${t.meetLink ? ` <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥</a>` : ''}</span>
           <span class="when">${timeStr}</span>
           <button class="del" data-action="delete" data-id="${t.id}">×</button>
         </li>
@@ -1821,6 +1930,63 @@ document.addEventListener('click', async (e)=>{
   }
 });
 
+function renderDetailSubtasks(task) {
+  if (!task.subtasks) task.subtasks = [];
+  const total = task.subtasks.length;
+  const done = task.subtasks.filter(s => s.done).length;
+  
+  subtasksRatio.textContent = total > 0 ? `${done}/${total}` : '';
+  
+  if (total === 0) {
+    subtasksList.innerHTML = '<div style="font-size:13px; color:var(--ink-faint); padding: 4px 0 8px;">Aucune sous-tâche.</div>';
+    return;
+  }
+
+  subtasksList.innerHTML = task.subtasks.map((s, idx) => `
+    <div class="subtask-item">
+      <button type="button" class="subtask-check ${s.done ? 'done' : ''}" data-subtask-idx="${idx}">
+        ${s.done ? '✓' : ''}
+      </button>
+      <span class="subtask-txt ${s.done ? 'done' : ''}">${escapeHtml(s.text)}</span>
+      <button type="button" class="subtask-del" data-subtask-del="${idx}">×</button>
+    </div>
+  `).join('');
+
+  subtasksList.querySelectorAll('.subtask-check').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.subtaskIdx, 10);
+      task.subtasks[idx].done = !task.subtasks[idx].done;
+      await saveTask(task);
+      renderDetailSubtasks(task);
+      renderAll();
+    });
+  });
+
+  subtasksList.querySelectorAll('.subtask-del').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.subtaskDel, 10);
+      task.subtasks.splice(idx, 1);
+      await saveTask(task);
+      renderDetailSubtasks(task);
+      renderAll();
+    });
+  });
+}
+
+subtaskForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = subtaskInput.value.trim();
+  if (!text || !detailTaskId) return;
+  const task = tasks.find(x => x.id === detailTaskId);
+  if (!task) return;
+  if (!task.subtasks) task.subtasks = [];
+  task.subtasks.push({ text, done: false });
+  subtaskInput.value = '';
+  await saveTask(task);
+  renderDetailSubtasks(task);
+  renderAll();
+});
+
 function openTaskDetail(id){
   const t = tasks.find(x => x.id === id);
   if(!t) return;
@@ -1856,13 +2022,17 @@ function openTaskDetail(id){
     detailDesc.style.display = 'none';
   }
 
+  renderDetailSubtasks(t);
+
   detailBackdrop.classList.add('open');
   detailSheet.classList.add('open');
 }
+
 function closeTaskDetail(){
   detailBackdrop.classList.remove('open');
   detailSheet.classList.remove('open');
   detailTaskId = null;
+  subtaskInput.value = '';
 }
 detailBackdrop.addEventListener('click', closeTaskDetail);
 detailCloseBtn.addEventListener('click', closeTaskDetail);
@@ -1955,6 +2125,7 @@ qaForm.addEventListener('submit', async (e)=>{
     repeat,
     remindBefore: parseInt(qaRemindSelect.value, 10) || 0,
     color: color,
+    subtasks: [],
     done: false,
     createdAt: Date.now(),
     meetLink: null,
