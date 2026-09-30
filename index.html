@@ -550,8 +550,8 @@
   }
 
   .crm-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
-  .crm-toggles { display: flex; gap: 10px; margin-top: 5px; }
-  .crm-toggles .modern-toggle { flex: 1; margin: 0; background: var(--card-soft); }
+  .crm-toggles { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
+  .crm-toggles .modern-toggle { flex: 1; min-width: 100px; margin: 0; background: var(--card-soft); }
   
   .crm-list { display: flex; flex-direction: column; gap: 10px; }
   .crm-card {
@@ -569,7 +569,9 @@
   .crm-name { font-weight: 600; font-size: 14px; color: var(--ink); }
   .crm-badge { background: var(--card-soft); color: var(--ink-soft); padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
   .crm-notes { font-size: 13px; color: var(--ink-soft); line-height: 1.4; white-space: pre-wrap; margin: 0; }
-  .crm-footer { margin-top: 8px; display: flex; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 500; }
+  .crm-footer { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 500; }
+  
+  .crm-edit { position: absolute; right: 32px; bottom: 8px; background: none; border: none; color: var(--accent); font-size: 14px; cursor: pointer; padding: 0 4px; }
   .crm-del { position: absolute; right: 8px; bottom: 8px; background: none; border: none; color: var(--rust); font-size: 18px; cursor: pointer; padding: 0 4px; }
 </style>
 </head>
@@ -925,9 +927,17 @@
           <input type="checkbox" id="crm-sms" />
           <div class="switch-track"><div class="switch-thumb"></div></div>
         </label>
+        <label class="modern-toggle small">
+          <span style="display:flex; align-items:center; gap:8px;">🤝 Physique</span>
+          <input type="checkbox" id="crm-physique" />
+          <div class="switch-track"><div class="switch-thumb"></div></div>
+        </label>
       </div>
       
-      <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Ajouter au suivi</button>
+      <div style="display: flex; gap: 10px; margin-top: 8px;">
+        <button type="button" class="btn btn-ghost" id="crm-cancel-btn" style="display:none; padding:12px;" onclick="cancelEditCRM()">Annuler</button>
+        <button type="submit" class="btn btn-primary" id="crm-submit-btn" style="flex:2;">Ajouter au suivi</button>
+      </div>
     </form>
 
     <div class="section-title" style="margin: 24px 0 12px 0;">Historique des relances</div>
@@ -1109,11 +1119,11 @@ const qaCancelBtn = document.getElementById('qaCancelBtn');
 const TAB_TITLES = { today: "Aujourd'hui", tasks: 'Tâches', stats: 'Bilan', account: 'Compte' };
 
 const WMO_WEATHER_ICONS = {
-  0: '☀️️', 1: '🌤️', 2: '⛅', 3: '☁️',
+  0: '☀', 1: '🌤️', 2: '⛅', 3: '☁️',
   45: '🌫', 48: '🌫',
   51: '🌦️', 53: '🌦️', 55: '🌧️',
-  61: '🌧️', 63: '🌧️', 65: '🌧',
-  71: '🌨️', 73: '🌨️', 75: '❄️', 77: '❄️',
+  61: '🌧️️', 63: '🌧️', 65: '🌧',
+  71: '🌨️', 73: '🌨️️', 75: '❄️', 77: '❄️',
   80: '🌦️', 81: '🌧️', 82: '🌧️',
   85: '🌨️', 86: '❄️',
   95: '⛈️', 96: '⛈️', 99: '⛈️'
@@ -2702,9 +2712,11 @@ notifBtn && notifBtn.addEventListener('click', async ()=>{
   if(ok) notifHint.style.display = 'none';
 });
 
-/* --- LOGIQUE CRM (Plein Écran) --- */
+/* --- LOGIQUE CRM (Plein Écran avec Édition) --- */
 const CRM_KEY = 'journee_crm_v1';
 let crmData = [];
+let editingCrmId = null;
+
 const crmPage = document.getElementById('crmPage');
 const openCrmBtn = document.getElementById('openCrmBtn');
 const closeCrmBtn = document.getElementById('closeCrmBtn');
@@ -2717,6 +2729,7 @@ if(openCrmBtn) {
 if(closeCrmBtn) {
   closeCrmBtn.addEventListener('click', () => {
     crmPage.classList.remove('open');
+    cancelEditCRM();
   });
 }
 
@@ -2758,15 +2771,46 @@ function renderCRM() {
         <div class="crm-footer">
           ${c.autoEmail ? '<span>📧 Email auto</span>' : ''}
           ${c.autoSms ? '<span>📱 SMS auto</span>' : ''}
+          ${c.autoPhysique ? '<span>🤝 Physique</span>' : ''}
         </div>
+        <button class="crm-edit" onclick="editCRM('${c.id}')">✏️</button>
         <button class="crm-del" onclick="deleteCRM('${c.id}')">×</button>
       </div>
     `;
   }).join('');
 }
 
+window.editCRM = function(id) {
+  const found = crmData.find(c => c.id === id);
+  if(!found) return;
+  
+  editingCrmId = id;
+  document.getElementById('crm-name').value = found.name || '';
+  document.getElementById('crm-date').value = found.date || '';
+  document.getElementById('crm-notes').value = found.notes || '';
+  document.getElementById('crm-email').checked = !!found.autoEmail;
+  document.getElementById('crm-sms').checked = !!found.autoSms;
+  document.getElementById('crm-physique').checked = !!found.autoPhysique;
+  
+  document.getElementById('crm-submit-btn').textContent = 'Modifier le suivi';
+  document.getElementById('crm-cancel-btn').style.display = 'block';
+  
+  // Fait scroller en haut pour voir le formulaire
+  document.querySelector('.crm-content').scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('crm-name').focus();
+};
+
+window.cancelEditCRM = function() {
+  editingCrmId = null;
+  const form = document.getElementById('crm-form');
+  if(form) form.reset();
+  document.getElementById('crm-submit-btn').textContent = 'Ajouter au suivi';
+  document.getElementById('crm-cancel-btn').style.display = 'none';
+};
+
 window.deleteCRM = function(id) {
   crmData = crmData.filter(c => c.id !== id);
+  if (editingCrmId === id) cancelEditCRM();
   saveCRM();
 };
 
@@ -2774,18 +2818,34 @@ const crmForm = document.getElementById('crm-form');
 if(crmForm) {
   crmForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const contact = {
-      id: uid(),
-      name: document.getElementById('crm-name').value.trim(),
-      date: document.getElementById('crm-date').value,
-      notes: document.getElementById('crm-notes').value.trim(),
-      autoEmail: document.getElementById('crm-email').checked,
-      autoSms: document.getElementById('crm-sms').checked
-    };
+    const name = document.getElementById('crm-name').value.trim();
+    const date = document.getElementById('crm-date').value;
+    const notes = document.getElementById('crm-notes').value.trim();
+    const autoEmail = document.getElementById('crm-email').checked;
+    const autoSms = document.getElementById('crm-sms').checked;
+    const autoPhysique = document.getElementById('crm-physique').checked;
     
-    crmData.push(contact);
+    if (editingCrmId) {
+      const found = crmData.find(c => c.id === editingCrmId);
+      if (found) {
+        found.name = name;
+        found.date = date;
+        found.notes = notes;
+        found.autoEmail = autoEmail;
+        found.autoSms = autoSms;
+        found.autoPhysique = autoPhysique;
+      }
+      cancelEditCRM();
+    } else {
+      const contact = {
+        id: uid(),
+        name, date, notes, autoEmail, autoSms, autoPhysique
+      };
+      crmData.push(contact);
+      crmForm.reset();
+    }
+    
     saveCRM();
-    crmForm.reset();
   });
 }
 
