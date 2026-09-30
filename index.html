@@ -111,7 +111,7 @@
     color: #fff;
   }
 
-  /* ÉCRAN DE CHARGEMENT AVEC TON LOGO EXACT ET BARRE DE PROGRESSION */
+  /* ÉCRAN DE CHARGEMENT */
   #splashScreen {
     position: fixed; inset: 0; background: #ECE3D0; z-index: 9999;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -221,10 +221,12 @@
 
   .tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
   .tray::-webkit-scrollbar{display:none;}
+  
+  /* Ajout du support tactile sur les "chips" */
   .chip{
     flex:0 0 auto; display:flex; align-items:center; gap:7px; background:var(--card);
     border:1px solid var(--line); border-radius:20px; padding:8px 12px 8px 10px; font-size:13px; white-space:nowrap;
-    cursor: grab; user-select: none;
+    cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none;
   }
   .chip:active { cursor: grabbing; }
   .chip.done{opacity:.5;}
@@ -665,7 +667,7 @@ window.addEventListener('load', () => {
   if(splash) {
     setTimeout(() => {
       splash.classList.add('hide');
-    }, 1200); 
+    }, 1400); 
   }
 });
 
@@ -1291,15 +1293,34 @@ function renderTimeline(){
   }
 }
 
+async function handleTaskDrop(taskId, hourStr) {
+  const task = tasks.find(x => x.id === taskId);
+  if(!task) return;
+  const hour = parseInt(hourStr, 10);
+  const newDate = new Date(selectedDate);
+  newDate.setHours(hour, 0, 0, 0);
+
+  task.due = newDate.toISOString();
+  if(!task.duration) task.duration = 30;
+  
+  renderAll();
+  await saveTask(task);
+  syncTaskReminder(task);
+  schedulePushReminder(task);
+}
+
+/* NOUVEAU MOTEUR DRAG AND DROP TACTILE (ET SOURIS) */
 function initDragAndDrop() {
   const chips = document.querySelectorAll('.chip[draggable="true"]');
+  const lanes = document.querySelectorAll('.lane');
+
+  /* Ordinateur : Drag & Drop HTML5 classique */
   chips.forEach(chip => {
     chip.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', chip.dataset.id);
     });
   });
 
-  const lanes = document.querySelectorAll('.lane');
   lanes.forEach(lane => {
     lane.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -1312,20 +1333,72 @@ function initDragAndDrop() {
       e.preventDefault();
       lane.classList.remove('drag-over');
       const taskId = e.dataTransfer.getData('text/plain');
-      const task = tasks.find(x => x.id === taskId);
-      if(!task) return;
+      await handleTaskDrop(taskId, lane.dataset.hour);
+    });
+  });
 
-      const hour = parseInt(lane.dataset.hour, 10);
-      const newDate = new Date(selectedDate);
-      newDate.setHours(hour, 0, 0, 0);
+  /* iPhone / Mobile : Simulation du Drag & Drop via Touch Events */
+  let activeClone = null;
+  let dragTaskId = null;
+  let currentLane = null;
 
-      task.due = newDate.toISOString();
-      if(!task.duration) task.duration = 30;
+  chips.forEach(chip => {
+    chip.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      dragTaskId = chip.dataset.id;
       
-      renderAll();
-      await saveTask(task);
-      syncTaskReminder(task);
-      schedulePushReminder(task);
+      // Crée une copie visuelle de la tâche qui va suivre le doigt
+      activeClone = chip.cloneNode(true);
+      activeClone.style.position = 'fixed';
+      activeClone.style.zIndex = '9999';
+      activeClone.style.opacity = '0.85';
+      activeClone.style.pointerEvents = 'none'; // Très important, pour pouvoir "voir" ce qu'il y a en dessous du doigt
+      activeClone.style.margin = '0';
+      
+      const rect = chip.getBoundingClientRect();
+      activeClone.style.width = rect.width + 'px';
+      activeClone.style.left = (touch.clientX - rect.width / 2) + 'px';
+      activeClone.style.top = (touch.clientY - rect.height / 2) + 'px';
+      
+      document.body.appendChild(activeClone);
+    }, {passive: false});
+
+    chip.addEventListener('touchmove', (e) => {
+      if (!activeClone) return;
+      e.preventDefault(); // Empêche l'iPhone de scroller pendant qu'on glisse la tâche
+      
+      const touch = e.touches[0];
+      activeClone.style.left = (touch.clientX - activeClone.offsetWidth / 2) + 'px';
+      activeClone.style.top = (touch.clientY - activeClone.offsetHeight / 2) + 'px';
+      
+      // Cherche si le doigt survole une ligne de la timeline
+      const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+      const laneBelow = elemBelow ? elemBelow.closest('.lane') : null;
+      
+      if (currentLane && currentLane !== laneBelow) {
+        currentLane.classList.remove('drag-over');
+      }
+      if (laneBelow) {
+        laneBelow.classList.add('drag-over');
+        currentLane = laneBelow;
+      } else {
+        currentLane = null;
+      }
+    }, {passive: false});
+
+    chip.addEventListener('touchend', async (e) => {
+      if (!activeClone) return;
+      
+      activeClone.remove();
+      activeClone = null;
+      
+      if (currentLane && dragTaskId) {
+        currentLane.classList.remove('drag-over');
+        // Si on lâche sur une heure, on déplace la tâche !
+        await handleTaskDrop(dragTaskId, currentLane.dataset.hour);
+        currentLane = null;
+      }
+      dragTaskId = null;
     });
   });
 }
