@@ -117,6 +117,7 @@
     border-color: rgba(231, 76, 60, 0.9);
   }
 
+  /* ÉCRAN DE CHARGEMENT */
   #splashScreen {
     position: fixed; inset: 0; background: #ECE3D0; z-index: 9999;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -151,24 +152,29 @@
     100% { width: 100%; }
   }
 
+  /* STRUCTURE FIGÉE 100DVH */
   *{box-sizing:border-box;}
-  html, body{ touch-action:manipulation; }
-  body{
-    margin:0; background:var(--bg); color:var(--ink);
-    font-family:'Inter',sans-serif; min-height:100vh;
-    -webkit-font-smoothing:antialiased; transition: background 0.3s ease, color 0.3s ease;
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%; height: 100dvh;
+    overflow: hidden; /* Empêche le défilement global de la page */
+    background: var(--bg); color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
+    transition: background 0.3s ease, color 0.3s ease;
   }
-  .wrap{
-    max-width:460px; margin:0 auto; padding:28px 16px 24px;
-    position:relative; min-height:100vh; padding-bottom:96px;
+  .wrap {
+    max-width: 460px; margin: 0 auto;
+    height: 100%; display: flex; flex-direction: column;
+    position: relative;
   }
 
-  header{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
+  header{ padding: 28px 16px 20px; display:flex; align-items:flex-start; justify-content:space-between; flex: 0 0 auto; }
   .day-name{ font-size:12.5px; color:var(--ink-soft); text-transform:lowercase; margin-bottom:2px; }
   h1{ font-family:'Fraunces',serif; font-weight:500; font-size:28px; margin:0; line-height:1.05; }
   .header-actions{ display:flex; align-items:center; gap:10px; }
   
-  /* PASTILLE MÉTÉO ÉPURÉE */
   .weather-pill {
     display: flex; align-items: center; gap: 6px;
     background: var(--card); border: 1px solid var(--line); border-radius: 20px;
@@ -183,9 +189,31 @@
   .ring-wrap{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px; }
   .ring-num{ font-size:11px; color:var(--ink-soft); font-weight:500; }
 
+  /* GESTION DES PANNEAUX INTERNES */
+  .panel {
+    display: none;
+    flex: 1;
+    min-height: 0; /* Important pour que le flex shrink fonctionne */
+  }
+  .panel.active {
+    display: flex; flex-direction: column;
+  }
+  
+  /* Panneaux avec scroll natif (Tâches, Bilan, Compte) */
+  #panel-tasks, #panel-stats, #panel-account {
+    padding: 0 16px 100px 16px; /* 100px pour éviter la tabbar */
+    overflow-y: auto;
+  }
+
+  /* Panneau Aujourd'hui 100% fixe, seule la timeline scroll */
+  #panel-today {
+    padding: 0 16px;
+    overflow: hidden;
+  }
+
   .view-switch{
     display:flex; background:var(--card-soft); border:1px solid var(--line);
-    border-radius:10px; padding:3px; margin-bottom:20px; gap:2px;
+    border-radius:10px; padding:3px; margin-bottom:20px; gap:2px; flex: 0 0 auto;
   }
   .view-btn{
     flex:1; background:none; border:none; border-radius:8px; padding:8px 4px;
@@ -193,15 +221,22 @@
   }
   .view-btn.active{ background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.15); }
 
-  .cal-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .cal-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex: 0 0 auto; }
   .cal-nav-label{ font-family:'Fraunces',serif; font-size:17px; font-weight:500; text-transform:capitalize; }
   .cal-arrow{ background:none; border:none; color:var(--ink-soft); font-size:20px; padding:4px 10px; cursor:pointer; }
 
-  .month-dow-row{ display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:6px; }
+  /* Vues Mois/Année */
+  #view-month, #view-year {
+    display: flex; flex-direction: column;
+    flex: 1; overflow-y: auto; padding-bottom: 100px;
+  }
+
+  .month-dow-row{ display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:6px; flex: 0 0 auto; }
   .month-dow-row span{ text-align:center; font-size:10.5px; color:var(--ink-faint); text-transform:lowercase; }
   .month-grid{
     display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:44px; gap:2px;
     background:var(--card); border:1px solid var(--line); border-radius:14px; padding:8px; margin-bottom:24px;
+    flex: 0 0 auto;
   }
   .month-cell{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -215,13 +250,18 @@
   .month-cell .dot-indicator{ width:4px; height:4px; border-radius:50%; background:var(--accent); }
   .month-cell .dot-indicator.empty{ background:transparent; }
 
-  .year-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:24px; }
+  .year-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:24px; flex: 0 0 auto;}
   .month-tile{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 8px; text-align:center; cursor:pointer; }
   .month-tile.current{ border-color:var(--ink); border-width:1.5px; }
   .month-tile .m-name{ font-family:'Fraunces',serif; font-size:14px; text-transform:capitalize; margin-bottom:6px; }
   .month-tile .m-count{ font-size:11px; color:var(--ink-soft); }
 
-  .week-strip{ display:flex; align-items:center; gap:2px; margin-bottom:20px; }
+  #view-day {
+    display: flex; flex-direction: column;
+    flex: 1; min-height: 0;
+  }
+
+  .week-strip{ display:flex; align-items:center; gap:2px; margin-bottom:20px; flex: 0 0 auto; }
   .week-arrow{ flex:0 0 auto; background:none; border:none; color:var(--ink-faint); font-size:18px; padding:4px 6px; cursor:pointer; }
   .week-days{ flex:1; display:flex; justify-content:space-between; }
   .week-day{ flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; padding:4px 0; cursor:pointer; background:none; border:none; font-family:'Inter',sans-serif; }
@@ -235,12 +275,10 @@
 
   .section-title{ font-size:12px; letter-spacing:.01em; color:var(--ink-soft); margin:0 0 10px 2px; }
 
-  .panel{display:none;}
-  .panel.active{display:block;}
-
   .tag-filter-bar {
     display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
     overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+    flex: 0 0 auto;
   }
   .tag-filter-bar::-webkit-scrollbar { display: none; }
   .tag-filter-chip {
@@ -256,7 +294,7 @@
     width: 8px; height: 8px; border-radius: 50%; background: var(--fc); flex: 0 0 auto;
   }
 
-  .tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
+  .tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; flex: 0 0 auto; }
   .tray::-webkit-scrollbar{display:none;}
   
   .draggable-item {
@@ -276,10 +314,13 @@
   .chip .del{background:none; border:none; color:var(--ink-faint); font-size:15px; cursor:pointer; padding:0 0 0 2px; line-height:1;}
 
   .timeline-outer{
+    flex: 1; display: flex; flex-direction: column; min-height: 0;
     position:relative; background:var(--card); border-radius:16px; border:1px solid var(--line);
-    margin-bottom:20px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.06);
+    margin-bottom:10px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.06);
   }
-  .timeline-scroll{ max-height:440px; overflow-y:auto; padding:6px 0; }
+  .timeline-scroll{
+    flex: 1; overflow-y: auto; padding: 6px 0 100px 0; /* 100px bottom pour que la dernière heure soit scrollable au-dessus de la tabbar */
+  }
   .timeline{ position:relative; padding-right:10px; }
   .hour-row{ position:relative; height:56px; display:flex; border-top:1px solid var(--line); }
   .hour-row:first-child{border-top:none;}
@@ -380,7 +421,6 @@
   .switch-track { width: 44px; height: 26px; background: var(--line); border-radius: 26px; position: relative; transition: background 0.3s ease; flex: 0 0 auto; }
   .switch-thumb { width: 22px; height: 22px; background: #FFF; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
   .modern-toggle input[type="checkbox"]:checked + .switch-track { background: var(--accent); }
-  .modern-toggle.gcal input[type="checkbox"]:checked + .switch-track { background: var(--gcal); }
   .modern-toggle.sage input[type="checkbox"]:checked + .switch-track { background: var(--sage); }
   .modern-toggle input[type="checkbox"]:checked + .switch-track .switch-thumb { transform: translateX(18px); }
 
@@ -439,7 +479,7 @@
   .detail-actions .btn{ flex:1; }
   #detailDeleteBtn{ color:var(--rust); }
 
-  .notif-hint{ font-size:12px; color:var(--ink-soft); margin:-6px 0 20px; display:flex; align-items:center; gap:8px; }
+  .notif-hint{ font-size:12px; color:var(--ink-soft); margin:-6px 0 20px; display:flex; align-items:center; gap:8px; flex:0 0 auto;}
   .notif-hint button{ background:none; border:1px solid var(--line); border-radius:8px; padding:4px 10px; font-size:12px; color:var(--ink); cursor:pointer; }
 
   .quick-fab{
@@ -927,7 +967,6 @@ const doneWrap = document.getElementById('doneWrap');
 const ringProgress = document.getElementById('ringProgress');
 const ringNum = document.getElementById('ringNum');
 
-/* METEO DOM */
 const weatherPill = document.getElementById('weatherPill');
 const weatherIcon = document.getElementById('weatherIcon');
 const weatherTemp = document.getElementById('weatherTemp');
@@ -980,13 +1019,11 @@ const qaCancelBtn = document.getElementById('qaCancelBtn');
 
 const TAB_TITLES = { today: "Aujourd'hui", tasks: 'Tâches', stats: 'Bilan', account: 'Compte' };
 
-/* GESTION DE LA METEO GEOLOCALISEE */
 const WMO_WEATHER_ICONS = {
-  0: '☀️',
-  1: '🌤️', 2: '⛅', 3: '☁️',
-  45: '🌫️️', 48: '🌫️',
+  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+  45: '🌫', 48: '🌫️',
   51: '🌦️', 53: '🌦️', 55: '🌧️',
-  61: '🌧️', 63: '🌧️', 65: '🌧️',
+  61: '🌧️', 63: '🌧️', 65: '🌧️️',
   71: '🌨️', 73: '🌨️', 75: '❄️', 77: '❄️',
   80: '🌦️', 81: '🌧️', 82: '🌧️',
   85: '🌨️', 86: '❄️',
@@ -998,13 +1035,8 @@ async function fetchWeatherForLocation(lat, lon) {
     const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`);
     if (!res.ok) return null;
     const data = await res.json();
-    return {
-      temp: Math.round(data.current.temperature_2m),
-      code: data.current.weather_code
-    };
-  } catch(e) {
-    return null;
-  }
+    return { temp: Math.round(data.current.temperature_2m), code: data.current.weather_code };
+  } catch(e) { return null; }
 }
 
 async function fetchCityName(lat, lon) {
@@ -1013,43 +1045,24 @@ async function fetchCityName(lat, lon) {
     if (!res.ok) return '';
     const data = await res.json();
     return data.address.city || data.address.town || data.address.village || data.address.municipality || '';
-  } catch(e) {
-    return '';
-  }
+  } catch(e) { return ''; }
 }
 
 async function updateWeatherWidget() {
   if (!('geolocation' in navigator)) return;
-  
   navigator.geolocation.getCurrentPosition(async (pos) => {
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-    
-    const weather = await fetchWeatherForLocation(lat, lon);
+    const weather = await fetchWeatherForLocation(pos.coords.latitude, pos.coords.longitude);
     if (!weather) return;
-    
-    const city = await fetchCityName(lat, lon);
-    
+    const city = await fetchCityName(pos.coords.latitude, pos.coords.longitude);
     weatherTemp.textContent = `${weather.temp}°`;
     weatherIcon.textContent = WMO_WEATHER_ICONS[weather.code] || '☀️';
-    if (city) {
-      weatherCity.textContent = city;
-      weatherCity.style.display = 'inline';
-    } else {
-      weatherCity.style.display = 'none';
-    }
-    
+    if (city) { weatherCity.textContent = city; weatherCity.style.display = 'inline'; } 
+    else { weatherCity.style.display = 'none'; }
     weatherPill.style.display = 'flex';
-  }, (err) => {
-    console.warn("Géolocalisation météo refusée ou indisponible :", err.message);
-  }, { timeout: 10000 });
+  }, (err) => { console.warn("Géoloc météo refusée :", err.message); }, { timeout: 10000 });
 }
 
-if (weatherPill) {
-  weatherPill.addEventListener('click', () => {
-    updateWeatherWidget();
-  });
-}
+if (weatherPill) weatherPill.addEventListener('click', updateWeatherWidget);
 
 function renderTagFilterBar() {
   const colorKeys = ['all', 'default', 'red', 'blue', 'green', 'yellow', 'purple'];
@@ -1069,11 +1082,8 @@ function renderTagFilterBar() {
   tagFilterBar.querySelectorAll('.tag-filter-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       const f = btn.dataset.filter;
-      if (f === 'all' || activeColorFilter === f) {
-        activeColorFilter = null;
-      } else {
-        activeColorFilter = f;
-      }
+      if (f === 'all' || activeColorFilter === f) activeColorFilter = null;
+      else activeColorFilter = f;
       renderTagFilterBar();
       renderTray();
       renderTimeline();
@@ -1089,20 +1099,9 @@ if (SpeechRecognition) {
   recognition.lang = 'fr-FR';
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
-
-  recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    parseAndFillTask(transcript);
-  };
-
-  recognition.onerror = (event) => {
-    console.error("Erreur micro:", event.error);
-    quickMicFab.classList.remove('listening');
-  };
-
-  recognition.onend = () => {
-    quickMicFab.classList.remove('listening');
-  };
+  recognition.onresult = (event) => parseAndFillTask(event.results[0][0].transcript);
+  recognition.onerror = () => quickMicFab.classList.remove('listening');
+  recognition.onend = () => quickMicFab.classList.remove('listening');
 } else {
   if (quickMicFab) quickMicFab.style.display = 'none';
 }
@@ -1110,46 +1109,120 @@ if (SpeechRecognition) {
 if(quickMicFab) {
   quickMicFab.addEventListener('click', () => {
     if(!recognition) return alert("L'assistant vocal n'est pas supporté sur ce navigateur.");
-    if(quickMicFab.classList.contains('listening')) {
-      recognition.stop();
-    } else {
-      quickMicFab.classList.add('listening');
-      recognition.start();
-    }
+    if(quickMicFab.classList.contains('listening')) recognition.stop();
+    else { quickMicFab.classList.add('listening'); recognition.start(); }
   });
 }
 
 function parseAndFillTask(text) {
-  let taskName = text;
-  let hour = null;
-  let minute = null;
-  
-  const timeRegex = /(?:à|a|vers)\s*(\d{1,2})\s*(?:h|heures?)\s*(\d{0,2})/i;
-  const match = text.match(timeRegex);
-  
-  if(match) {
-    hour = parseInt(match[1], 10);
-    minute = match[2] ? parseInt(match[2], 10) : 0;
-    taskName = text.replace(match[0], '').trim();
+  // 1. AUTO-PLANIFICATION DE SEMAINE
+  const isWeekPlanning = /agenda.*semaine|planifi.*semaine/i.test(text);
+  if (isWeekPlanning) {
+     let core = text.replace(/.*semaine(\s+(avec|pour|de|:))?/i, '').trim();
+     let items = core.split(/\bet\b|,|puis/).map(s => s.trim()).filter(s => s.length > 2);
+     if (items.length > 0) {
+        let added = 0;
+        items.forEach((item, i) => {
+           let targetDate = new Date();
+           targetDate.setDate(targetDate.getDate() + 1 + i); // Répartit sur les jours suivants
+           targetDate.setHours(18, 0, 0, 0); // Heure par défaut
+           let tName = item.charAt(0).toUpperCase() + item.slice(1);
+           const t = {
+              id: uid(), text: tName, description: '✨ Planifié par IA',
+              due: targetDate.toISOString(), duration: 30, repeat: 'none',
+              remindBefore: 15, color: 'purple', subtasks: [], done: false,
+              createdAt: Date.now(), meetLink: null, gcalEventId: null
+           };
+           tasks.push(t);
+           added++;
+           if(autoSyncEnabled) syncTaskReminder(t);
+           schedulePushReminder(t);
+        });
+        persistAll(); renderAll();
+        alert(`✨ Magie IA : ${added} tâches réparties sur ta semaine !`);
+        return;
+     }
   }
+
+  // 2. EXTRACTION DE MULTIPLES TÂCHES AVEC JOURS/HEURES
+  let segments = text.split(/\bet\b|\bpuis\b|,/).map(s => s.trim()).filter(s => s.length > 2);
+  let addedCount = 0;
+  let lastTargetDate = new Date(selectedDate);
   
-  taskName = taskName.charAt(0).toUpperCase() + taskName.slice(1);
+  segments.forEach(segment => {
+     let taskName = segment;
+     let hour = null; let minute = 0;
+     let targetDate = new Date(lastTargetDate);
+     
+     const timeRegex = /(?:à|a|vers)\s*(\d{1,2})\s*(?:h|heures?)\s*(\d{0,2})/i;
+     const timeMatch = segment.match(timeRegex);
+     if(timeMatch) {
+       hour = parseInt(timeMatch[1], 10);
+       minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+       taskName = taskName.replace(timeMatch[0], '').trim();
+     }
+     
+     const dayRegex = /\b(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|demain|après-demain)\b/i;
+     const dayMatch = segment.match(dayRegex);
+     if(dayMatch) {
+       const d = dayMatch[1].toLowerCase();
+       targetDate = new Date(); // base calculée sur aujourd'hui
+       if(d === 'demain') {
+         targetDate.setDate(targetDate.getDate() + 1);
+       } else if (d === 'après-demain') {
+         targetDate.setDate(targetDate.getDate() + 2);
+       } else {
+         const days = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+         const targetDow = days.indexOf(d);
+         const currentDow = targetDate.getDay();
+         let diff = targetDow - currentDow;
+         if (diff <= 0) diff += 7; // Prochaine occurrence
+         targetDate.setDate(targetDate.getDate() + diff);
+       }
+       taskName = taskName.replace(dayMatch[0], '').trim();
+       lastTargetDate = new Date(targetDate);
+     }
+     
+     taskName = taskName.replace(/^(je veux|ajoute|de|faire)\s+/i, '');
+     taskName = taskName.charAt(0).toUpperCase() + taskName.slice(1);
+     
+     if(taskName.length > 2) {
+       if(segments.length === 1 && !dayMatch && hour === null) {
+         openQuickAdd();
+         qaTaskInput.value = taskName;
+         qaSubmitBtn.disabled = false;
+       } else if (segments.length === 1 && hour !== null && !dayMatch) {
+         openQuickAdd();
+         qaTaskInput.value = taskName;
+         qaSubmitBtn.disabled = false;
+         targetDate.setHours(hour, minute, 0, 0);
+         const y = targetDate.getFullYear();
+         const m = String(targetDate.getMonth()+1).padStart(2,'0');
+         const d = String(targetDate.getDate()).padStart(2,'0');
+         const hh = String(targetDate.getHours()).padStart(2,'0');
+         const mm = String(targetDate.getMinutes()).padStart(2,'0');
+         qaDateInput.value = `${y}-${m}-${d}T${hh}:${mm}`;
+       } else {
+         if(hour !== null) targetDate.setHours(hour, minute, 0, 0);
+         const t = {
+            id: uid(), text: taskName, description: segment.match(dayRegex) ? '✨ Ajouté par IA' : '',
+            due: (hour !== null || dayMatch) ? targetDate.toISOString() : null,
+            duration: 30, repeat: 'none', remindBefore: 0, color: 'default',
+            subtasks: [], done: false, createdAt: Date.now(), meetLink: null, gcalEventId: null
+         };
+         tasks.push(t);
+         addedCount++;
+         if(t.due && autoSyncEnabled) syncTaskReminder(t);
+         if(t.due) schedulePushReminder(t);
+       }
+     }
+  });
   
-  openQuickAdd();
-  qaTaskInput.value = taskName;
-  qaSubmitBtn.disabled = false;
-  
-  if(hour !== null && hour >= 0 && hour <= 23) {
-    const now = new Date(selectedDate);
-    now.setHours(hour, minute, 0, 0);
-    
-    const y = now.getFullYear();
-    const m = String(now.getMonth()+1).padStart(2,'0');
-    const d = String(now.getDate()).padStart(2,'0');
-    const hh = String(now.getHours()).padStart(2,'0');
-    const mm = String(now.getMinutes()).padStart(2,'0');
-    
-    qaDateInput.value = `${y}-${m}-${d}T${hh}:${mm}`;
+  if(addedCount > 0 && segments.length > 1) {
+     persistAll(); renderAll();
+     alert(`✨ ${addedCount} tâches ajoutées automatiquement à ton agenda !`);
+  } else if (addedCount === 1 && segments.length > 0) {
+     persistAll(); renderAll();
   }
 }
 
@@ -1766,7 +1839,7 @@ function renderTimeline(){
       <button class="task-check ${t.done?'done':''}" data-action="toggle" data-id="${t.id}"></button>
       <div class="task-info">
         <div class="task-title ${t.done?'done':''}">${escapeHtml(t.text)}${subBadge}</div>
-        <div class="task-time">${timeStr}${late?' · en retard':''}${t.meetLink ? ` · <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥 Meet</a>` : ''}</div>
+        <div class="task-time">${timeStr}${late?' · en retard':''}${t.meetLink ? ` · <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥</a>` : ''}</div>
       </div>
       <button class="task-del" data-action="delete" data-id="${t.id}">×</button>
     `;
@@ -2548,7 +2621,7 @@ initGoogleAuth();
 setupNotifPrompt();
 updateWeatherWidget();
 setInterval(()=>{ renderAll(); }, 60000);
-setInterval(()=>{ updateWeatherWidget(); }, 1800000); // Actualisation météo toutes les 30 min
+setInterval(()=>{ updateWeatherWidget(); }, 1800000);
 quickFab.classList.add('show');
 if(SpeechRecognition) quickMicFab.classList.add('show');
 setTimeout(scrollToNow, 200);
