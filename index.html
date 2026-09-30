@@ -110,6 +110,10 @@
     background: rgba(0,0,0,0.6);
     color: #fff;
   }
+  [data-theme="glass"] .mic-fab.listening {
+    background: rgba(231, 76, 60, 0.8);
+    border-color: rgba(231, 76, 60, 0.9);
+  }
 
   /* ÉCRAN DE CHARGEMENT */
   #splashScreen {
@@ -222,7 +226,7 @@
   .tray{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
   .tray::-webkit-scrollbar{display:none;}
   
-  /* DRAGGABLE ITEMS (Plateau + Timeline) */
+  /* DRAGGABLE ITEMS */
   .draggable-item {
     cursor: grab; user-select: none; -webkit-user-select: none;
     transition: opacity 0.2s ease, transform 0.2s ease;
@@ -362,12 +366,28 @@
   .notif-hint{ font-size:12px; color:var(--ink-soft); margin:-6px 0 20px; display:flex; align-items:center; gap:8px; }
   .notif-hint button{ background:none; border:1px solid var(--line); border-radius:8px; padding:4px 10px; font-size:12px; color:var(--ink); cursor:pointer; }
 
+  /* FAB & MIC FAB */
   .quick-fab{
     position:fixed; right:20px; bottom:88px; width:50px; height:50px; border-radius:50%;
     background:var(--bg); color:var(--ink); border:1px solid var(--line); font-size:26px; font-weight:400;
     cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.15); display:none; align-items:center; justify-content:center; z-index:21;
   }
   .quick-fab.show{display:flex;}
+  
+  .mic-fab {
+    bottom: 148px; 
+    font-size: 20px;
+    transition: background 0.3s, transform 0.2s;
+  }
+  .mic-fab.listening {
+    background: var(--rust);
+    color: #fff;
+    animation: pulseMic 1s infinite alternate;
+  }
+  @keyframes pulseMic {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.1); box-shadow: 0 4px 20px rgba(231, 76, 60, 0.4); }
+  }
 
   .qa-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; z-index:30; }
   .qa-backdrop.open{display:block;}
@@ -523,6 +543,7 @@
 </div>
 
 <button class="quick-fab" id="quickFab" aria-label="Ajouter rapidement">+</button>
+<button class="quick-fab mic-fab" id="quickMicFab" aria-label="Ajout vocal intelligent">🎙️</button>
 
 <!-- MENU PARAMETRES -->
 <div class="qa-backdrop" id="settingsBackdrop"></div>
@@ -802,6 +823,7 @@ const detailCloseBtn = document.getElementById('detailCloseBtn');
 let detailTaskId = null;
 
 const quickFab = document.getElementById('quickFab');
+const quickMicFab = document.getElementById('quickMicFab');
 const qaBackdrop = document.getElementById('qaBackdrop');
 const qaSheet = document.getElementById('qaSheet');
 const qaForm = document.getElementById('qaForm');
@@ -812,6 +834,81 @@ const qaSubmitBtn = document.getElementById('qaSubmitBtn');
 const qaCancelBtn = document.getElementById('qaCancelBtn');
 
 const TAB_TITLES = { today: "Aujourd'hui", upcoming: 'À venir', stats: 'Bilan', done: 'Fait', account: 'Compte' };
+
+/* ---------- AJOUT VOCAL (DICTAPHONE) ---------- */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'fr-FR';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    parseAndFillTask(transcript);
+  };
+
+  recognition.onerror = (event) => {
+    console.error("Erreur micro:", event.error);
+    quickMicFab.classList.remove('listening');
+  };
+
+  recognition.onend = () => {
+    quickMicFab.classList.remove('listening');
+  };
+} else {
+  if (quickMicFab) quickMicFab.style.display = 'none';
+}
+
+if(quickMicFab) {
+  quickMicFab.addEventListener('click', () => {
+    if(!recognition) return alert("La reconnaissance vocale n'est pas supportée sur ce navigateur.");
+    if(quickMicFab.classList.contains('listening')) {
+      recognition.stop();
+    } else {
+      quickMicFab.classList.add('listening');
+      recognition.start();
+    }
+  });
+}
+
+function parseAndFillTask(text) {
+  let taskName = text;
+  let hour = null;
+  let minute = null;
+  
+  // Exemple de parsing simple : "à 14h30", "à 9 heures", "vers 15 h 15"
+  const timeRegex = /(?:à|a|vers)\s*(\d{1,2})\s*(?:h|heures?)\s*(\d{0,2})/i;
+  const match = text.match(timeRegex);
+  
+  if(match) {
+    hour = parseInt(match[1], 10);
+    minute = match[2] ? parseInt(match[2], 10) : 0;
+    taskName = text.replace(match[0], '').trim();
+  }
+  
+  // Met la première lettre en majuscule
+  taskName = taskName.charAt(0).toUpperCase() + taskName.slice(1);
+  
+  openQuickAdd();
+  qaTaskInput.value = taskName;
+  qaSubmitBtn.disabled = false;
+  
+  if(hour !== null && hour >= 0 && hour <= 23) {
+    const now = new Date(selectedDate);
+    now.setHours(hour, minute, 0, 0);
+    
+    const y = now.getFullYear();
+    const m = String(now.getMonth()+1).padStart(2,'0');
+    const d = String(now.getDate()).padStart(2,'0');
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    
+    qaDateInput.value = `${y}-${m}-${d}T${hh}:${mm}`;
+  }
+}
 
 const CONTACTS_KEY = 'journee_contacts_v1';
 let contacts = [];
@@ -986,7 +1083,10 @@ function switchTab(tab){
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if(tab !== 'today') pageTitle.textContent = TAB_TITLES[tab];
   else updateTodayHeader();
+  
   quickFab.classList.toggle('show', tab === 'today');
+  if(SpeechRecognition) quickMicFab.classList.toggle('show', tab === 'today');
+  
   if(tab === 'stats') renderStats();
   if(tab === 'today') setTimeout(scrollToNow, 50);
 }
@@ -2124,6 +2224,7 @@ initGoogleAuth();
 setupNotifPrompt();
 setInterval(()=>{ renderAll(); }, 60000);
 quickFab.classList.add('show');
+if(SpeechRecognition) quickMicFab.classList.add('show');
 setTimeout(scrollToNow, 200);
 </script>
 </body>
