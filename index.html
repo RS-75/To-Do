@@ -90,7 +90,8 @@
   [data-theme="glass"] textarea,
   [data-theme="glass"] .qa-sheet,
   [data-theme="glass"] .tabbar,
-  [data-theme="glass"] .quick-fab {
+  [data-theme="glass"] .quick-fab,
+  [data-theme="glass"] .collapsible-header {
     background: var(--card);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -109,6 +110,10 @@
   [data-theme="glass"] .week-day.today .num {
     background: rgba(0,0,0,0.6);
     color: #fff;
+  }
+  [data-theme="glass"] .mic-fab.listening {
+    background: rgba(231, 76, 60, 0.8);
+    border-color: rgba(231, 76, 60, 0.9);
   }
 
   /* ÉCRAN DE CHARGEMENT */
@@ -274,7 +279,32 @@
   .now-line{ position:absolute; left:52px; right:0; height:0; border-top:1.5px solid var(--rust); z-index:5; }
   .now-line::before{ content:''; position:absolute; left:-4px; top:-3.5px; width:7px; height:7px; border-radius:50%; background:var(--rust); }
 
-  .agenda-group{margin-bottom:20px;}
+  /* ONGLETS ACCORDÉONS (TÂCHES) */
+  .collapsible-group { margin-bottom: 16px; }
+  .collapsible-header {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    padding: 16px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; font-family: 'Fraunces', serif; font-size: 18px;
+    font-weight: 500; color: var(--ink); cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .collapsible-header .c-arrow {
+    color: var(--ink-soft); transition: transform 0.3s ease;
+  }
+  .collapsible-header.active .c-arrow {
+    transform: rotate(180deg);
+  }
+  .collapsible-content {
+    display: none; padding: 12px 4px;
+  }
+  .collapsible-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   .agenda-list{list-style:none; margin:0; padding:0;}
   .agenda-item{ display:flex; align-items:center; gap:10px; padding:11px 4px; border-bottom:1px solid var(--line); }
   .agenda-item:last-child{border-bottom:none;}
@@ -492,9 +522,29 @@
     </div>
   </section>
 
-  <!-- À VENIR -->
-  <section class="panel" id="panel-upcoming">
-    <div id="upcomingWrap"></div>
+  <!-- NOUVEL ONGLET FUSIONNÉ : TÂCHES (À VENIR & FAIT) -->
+  <section class="panel" id="panel-tasks">
+    
+    <div class="collapsible-group">
+      <button class="collapsible-header active" type="button">
+        <span>À venir</span>
+        <svg class="c-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div class="collapsible-content active">
+        <div id="upcomingWrap"></div>
+      </div>
+    </div>
+
+    <div class="collapsible-group">
+      <button class="collapsible-header" type="button">
+        <span>Faites</span>
+        <svg class="c-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div class="collapsible-content">
+        <div id="doneWrap"></div>
+      </div>
+    </div>
+
   </section>
 
   <!-- STATS & BILAN -->
@@ -510,11 +560,6 @@
       </div>
       <div style="font-size: 12px; color: var(--ink-soft); text-align: right;" id="statsPercentage">0% de réussite</div>
     </div>
-  </section>
-
-  <!-- FAIT -->
-  <section class="panel" id="panel-done">
-    <div id="doneWrap"></div>
   </section>
 
   <!-- COMPTE -->
@@ -543,7 +588,7 @@
 
 <button class="quick-fab" id="quickFab" aria-label="Ajouter rapidement">+</button>
 
-<!-- NOUVEAU BOUTON ASSISTANT IA -->
+<!-- BOUTON ASSISTANT IA -->
 <button class="quick-fab mic-fab" id="quickMicFab" aria-label="Assistant IA vocal">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"></path>
@@ -674,17 +719,13 @@
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
     <span>Aujourd'hui</span>
   </button>
-  <button class="tab-btn" data-tab="upcoming" style="position:relative;">
+  <button class="tab-btn" data-tab="tasks" style="position:relative;">
     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-    <span>À venir</span>
+    <span>Tâches</span>
   </button>
   <button class="tab-btn" data-tab="stats" style="position:relative;">
     <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
     <span>Bilan</span>
-  </button>
-  <button class="tab-btn" data-tab="done" style="position:relative;">
-    <svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>
-    <span>Fait</span>
   </button>
   <button class="tab-btn" data-tab="account" style="position:relative;">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
@@ -693,7 +734,7 @@
 </nav>
 
 <script>
-/* Gestion de l'écran de chargement avec ton logo (1.4 seconde de fondu fluide) */
+/* Gestion de l'écran de chargement */
 window.addEventListener('load', () => {
   const splash = document.getElementById('splashScreen');
   if(splash) {
@@ -701,6 +742,15 @@ window.addEventListener('load', () => {
       splash.classList.add('hide');
     }, 1400); 
   }
+});
+
+/* Gestion des accordéons (Tâches À venir / Fait) */
+document.querySelectorAll('.collapsible-header').forEach(header => {
+  header.addEventListener('click', () => {
+    header.classList.toggle('active');
+    const content = header.nextElementSibling;
+    content.classList.toggle('active');
+  });
 });
 
 const themeSelect = document.getElementById('themeSelect');
@@ -839,7 +889,7 @@ const qaRemindSelect = document.getElementById('qaRemindSelect');
 const qaSubmitBtn = document.getElementById('qaSubmitBtn');
 const qaCancelBtn = document.getElementById('qaCancelBtn');
 
-const TAB_TITLES = { today: "Aujourd'hui", upcoming: 'À venir', stats: 'Bilan', done: 'Fait', account: 'Compte' };
+const TAB_TITLES = { today: "Aujourd'hui", tasks: 'Tâches', stats: 'Bilan', account: 'Compte' };
 
 /* ---------- AJOUT VOCAL (ASSISTANT IA) ---------- */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -885,7 +935,6 @@ function parseAndFillTask(text) {
   let hour = null;
   let minute = null;
   
-  // Exemple de parsing simple : "à 14h30", "à 9 heures", "vers 15 h 15"
   const timeRegex = /(?:à|a|vers)\s*(\d{1,2})\s*(?:h|heures?)\s*(\d{0,2})/i;
   const match = text.match(timeRegex);
   
@@ -895,7 +944,6 @@ function parseAndFillTask(text) {
     taskName = text.replace(match[0], '').trim();
   }
   
-  // Met la première lettre en majuscule
   taskName = taskName.charAt(0).toUpperCase() + taskName.slice(1);
   
   openQuickAdd();
@@ -1093,6 +1141,10 @@ function switchTab(tab){
   quickFab.classList.toggle('show', tab === 'today');
   if(SpeechRecognition) quickMicFab.classList.toggle('show', tab === 'today');
   
+  if(tab === 'tasks'){
+    renderUpcoming();
+    renderDone();
+  }
   if(tab === 'stats') renderStats();
   if(tab === 'today') setTimeout(scrollToNow, 50);
 }
@@ -1211,8 +1263,10 @@ function renderAll(){
   renderRing();
   renderTray();
   renderTimeline();
-  renderUpcoming();
-  renderDone();
+  if(activeTab === 'tasks') {
+    renderUpcoming();
+    renderDone();
+  }
   renderMonthGrid();
   renderYearGrid();
   ensureDayGoogleEvents();
@@ -1571,11 +1625,14 @@ function renderUpcoming(){
     .filter(t => !t.done && t.due && !isSameDay(new Date(t.due), now) && new Date(t.due) > now)
     .sort((a,b)=> new Date(a.due) - new Date(b.due));
 
+  const wrap = document.getElementById('upcomingWrap');
+  if(!wrap) return;
+
   if(upcoming.length === 0){
-    upcomingWrap.innerHTML = `<div class="empty-note">Rien de prévu pour les prochains jours.</div>`;
+    wrap.innerHTML = `<div class="empty-note">Rien de prévu pour les prochains jours.</div>`;
     return;
   }
-  upcomingWrap.innerHTML = `
+  wrap.innerHTML = `
     <ul class="agenda-list">
       ${upcoming.map(t => {
         let timeStr = fmtDateShort(t.due);
@@ -1600,11 +1657,14 @@ function renderDone(){
     .filter(t => t.done)
     .sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
 
+  const wrap = document.getElementById('doneWrap');
+  if(!wrap) return;
+
   if(done.length === 0){
-    doneWrap.innerHTML = `<div class="empty-note">Rien de terminé pour l'instant.</div>`;
+    wrap.innerHTML = `<div class="empty-note">Rien de terminé pour l'instant.</div>`;
     return;
   }
-  doneWrap.innerHTML = `
+  wrap.innerHTML = `
     <ul class="agenda-list">
       ${done.map(t => `
         <li class="agenda-item task-row" data-id="${t.id}">
