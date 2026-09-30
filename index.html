@@ -94,7 +94,8 @@
   [data-theme="glass"] .quick-fab,
   [data-theme="glass"] .collapsible-header,
   [data-theme="glass"] .weather-pill,
-  [data-theme="glass"] .crm-header {
+  [data-theme="glass"] .crm-header,
+  [data-theme="glass"] .crm-stat {
     background: var(--card);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -550,6 +551,11 @@
     padding-bottom: max(100px, env(safe-area-inset-bottom));
   }
 
+  .crm-dashboard { display:flex; gap:10px; margin-bottom: 20px; }
+  .crm-stat { flex:1; background:var(--card-soft); border-radius:10px; padding:12px 8px; text-align:center; display:flex; flex-direction:column; border:1px solid var(--line); }
+  .crm-stat span { font-size:10px; color:var(--ink-soft); text-transform:uppercase; font-weight:600; margin-bottom:4px; }
+  .crm-stat b { font-size:20px; color:var(--ink); font-family:'Fraunces', serif; }
+
   .crm-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
   .crm-toggles { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
   .crm-toggles .modern-toggle { flex: 1; min-width: 100px; margin: 0; background: var(--card-soft); }
@@ -557,7 +563,7 @@
   .crm-list { display: flex; flex-direction: column; gap: 10px; }
   .crm-card {
     background: var(--card);
-    border-left: 3px solid var(--accent);
+    border-left: 4px solid var(--accent);
     border-top: 1px solid var(--line);
     border-right: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
@@ -573,6 +579,7 @@
   .crm-notes { font-size: 13px; color: var(--ink-soft); line-height: 1.4; white-space: pre-wrap; margin: 0; }
   .crm-footer { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
   
+  .crm-clone { position: absolute; right: 56px; bottom: 8px; background: none; border: none; color: var(--accent); font-size: 16px; cursor: pointer; padding: 0 4px; }
   .crm-edit { position: absolute; right: 32px; bottom: 8px; background: none; border: none; color: var(--accent); font-size: 14px; cursor: pointer; padding: 0 4px; }
   .crm-del { position: absolute; right: 8px; bottom: 8px; background: none; border: none; color: var(--rust); font-size: 18px; cursor: pointer; padding: 0 4px; }
 </style>
@@ -911,10 +918,36 @@
     <div style="width: 60px;"></div>
   </div>
   <div class="crm-content">
+    
+    <!-- DASHBOARD MINI-BILAN -->
+    <div class="crm-dashboard">
+      <div class="crm-stat"><span>Total</span><b id="crm-stat-total">0</b></div>
+      <div class="crm-stat"><span>À venir (7j)</span><b id="crm-stat-week">0</b></div>
+      <div class="crm-stat"><span>En retard</span><b id="crm-stat-late" style="color:var(--rust);">0</b></div>
+    </div>
+
+    <!-- RECHERCHE ET FILTRES -->
+    <input type="text" id="crm-search-input" placeholder="🔍 Rechercher un contact ou un projet..." style="margin-bottom: 12px;"/>
+
+    <div class="tag-filter-bar" style="margin-bottom: 20px;">
+      <button class="tag-filter-chip crm-filter-btn active" data-filter="all">Tout</button>
+      <button class="tag-filter-chip crm-filter-btn" data-filter="today">Aujourd'hui</button>
+      <button class="tag-filter-chip crm-filter-btn" data-filter="late">En retard</button>
+    </div>
+
+    <!-- FORMULAIRE CRM -->
     <form id="crm-form" class="crm-form">
-      <input type="text" id="crm-name" placeholder="Nom du contact ou projet" required />
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="crm-name" placeholder="Nom du contact ou projet" required style="flex:2;" />
+        <select id="crm-status" required style="flex:1; padding:0 8px; font-size:13px;">
+          <option value="acontacter">À contacter</option>
+          <option value="attente" selected>En attente</option>
+          <option value="rdv">Entretien/Rdv</option>
+          <option value="conclu">Conclu/Accepté</option>
+          <option value="refuse">Refusé</option>
+        </select>
+      </div>
       
-      <!-- NOUVEAUX CHAMPS EMAIL ET TÉLÉPHONE -->
       <div style="display:flex; gap:8px;">
         <input type="email" id="crm-contact-email" placeholder="Email" style="flex:1;" />
         <input type="tel" id="crm-contact-phone" placeholder="Téléphone" style="flex:1;" />
@@ -1135,7 +1168,7 @@ const WMO_WEATHER_ICONS = {
   71: '🌨️', 73: '🌨', 75: '❄️', 77: '❄️',
   80: '🌦️', 81: '🌧️', 82: '🌧️',
   85: '🌨️', 86: '❄️',
-  95: '⛈️', 96: '⛈️', 99: '⛈️'
+  95: '⛈️', 96: '⛈️️', 99: '⛈️'
 };
 
 async function fetchWeatherForLocation(lat, lon) {
@@ -2721,10 +2754,20 @@ notifBtn && notifBtn.addEventListener('click', async ()=>{
   if(ok) notifHint.style.display = 'none';
 });
 
-/* --- LOGIQUE CRM (Plein Écran avec Édition) --- */
+/* --- LOGIQUE CRM (Plein Écran avec Édition, Filtres, Bilan, Statuts) --- */
 const CRM_KEY = 'journee_crm_v1';
 let crmData = [];
 let editingCrmId = null;
+let currentCrmFilter = 'all';
+let currentCrmSearch = '';
+
+const CRM_STATUSES = {
+  'acontacter': { label: 'À contacter', color: 'var(--ink-soft)' },
+  'attente': { label: 'En attente', color: '#F1C40F' },
+  'rdv': { label: 'Entretien/Rdv', color: '#3498DB' },
+  'conclu': { label: 'Conclu/Accepté', color: '#2ECC71' },
+  'refuse': { label: 'Refusé', color: '#E74C3C' }
+};
 
 const crmPage = document.getElementById('crmPage');
 const openCrmBtn = document.getElementById('openCrmBtn');
@@ -2741,6 +2784,25 @@ if(closeCrmBtn) {
     cancelEditCRM();
   });
 }
+
+// Recherche
+const crmSearchInput = document.getElementById('crm-search-input');
+if(crmSearchInput) {
+  crmSearchInput.addEventListener('input', (e) => {
+    currentCrmSearch = e.target.value.toLowerCase();
+    renderCRM();
+  });
+}
+
+// Filtres rapides
+document.querySelectorAll('.crm-filter-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.crm-filter-btn').forEach(b => b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    currentCrmFilter = e.currentTarget.dataset.filter;
+    renderCRM();
+  });
+});
 
 function loadCRM() {
   try {
@@ -2759,12 +2821,48 @@ function renderCRM() {
   const list = document.getElementById('crm-list');
   if(!list) return;
   
-  if (crmData.length === 0) {
-    list.innerHTML = '<div class="empty-note" style="padding: 10px 0;">Aucun suivi en cours.</div>';
+  const now = new Date();
+  
+  // Calcul du Mini-Bilan
+  let total = crmData.length;
+  let lateCount = 0;
+  let weekCount = 0;
+  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  crmData.forEach(c => {
+    const d = new Date(c.date);
+    if (d < now && c.status !== 'conclu' && c.status !== 'refuse') lateCount++;
+    if (d >= now && d <= nextWeek) weekCount++;
+  });
+
+  document.getElementById('crm-stat-total').textContent = total;
+  document.getElementById('crm-stat-week').textContent = weekCount;
+  document.getElementById('crm-stat-late').textContent = lateCount;
+
+  // Filtrage
+  let filtered = [...crmData];
+  
+  if (currentCrmSearch) {
+    filtered = filtered.filter(c => 
+      (c.name || '').toLowerCase().includes(currentCrmSearch) || 
+      (c.notes || '').toLowerCase().includes(currentCrmSearch) ||
+      (c.contactEmail || '').toLowerCase().includes(currentCrmSearch)
+    );
+  }
+  
+  if (currentCrmFilter === 'today') {
+    filtered = filtered.filter(c => isSameDay(new Date(c.date), now));
+  } else if (currentCrmFilter === 'late') {
+    filtered = filtered.filter(c => new Date(c.date) < now && c.status !== 'conclu' && c.status !== 'refuse');
+  }
+
+  // Affichage
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-note" style="padding: 10px 0;">Aucun suivi trouvé.</div>';
     return;
   }
 
-  const sorted = [...crmData].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   list.innerHTML = sorted.map(c => {
     const dateObj = new Date(c.date);
@@ -2788,11 +2886,16 @@ function renderCRM() {
 
     let physiqueBadge = c.autoPhysique ? `<span class="crm-badge" style="background:var(--card-soft);color:var(--ink-soft);">🤝 Physique</span>` : '';
 
+    const currentStatus = CRM_STATUSES[c.status] || CRM_STATUSES['attente'];
+
     return `
-      <div class="crm-card">
+      <div class="crm-card" style="border-left-color: ${currentStatus.color};">
         <div class="crm-card-header">
           <div class="crm-name">${escapeHtml(c.name)}</div>
           <div class="crm-badge" style="background:var(--card-soft);color:var(--ink-soft);">⏳ ${dateStr}</div>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; color: ${currentStatus.color}; margin-bottom: 8px; text-transform: uppercase;">
+          • ${currentStatus.label}
         </div>
         ${infoHtml}
         <p class="crm-notes">${escapeHtml(c.notes)}</p>
@@ -2802,12 +2905,28 @@ function renderCRM() {
           ${callBadge}
           ${physiqueBadge}
         </div>
+        <button class="crm-clone" onclick="cloneCRM('${c.id}')" title="Nouvelle étape">🔄</button>
         <button class="crm-edit" onclick="editCRM('${c.id}')">✏️</button>
         <button class="crm-del" onclick="deleteCRM('${c.id}')">×</button>
       </div>
     `;
   }).join('');
 }
+
+window.cloneCRM = function(id) {
+  const found = crmData.find(c => c.id === id);
+  if(!found) return;
+  cancelEditCRM(); // On s'assure de ne pas écraser l'ancien
+  
+  document.getElementById('crm-name').value = found.name || '';
+  document.getElementById('crm-contact-email').value = found.contactEmail || '';
+  document.getElementById('crm-contact-phone').value = found.contactPhone || '';
+  document.getElementById('crm-status').value = found.status || 'attente';
+  document.getElementById('crm-notes').value = ''; // On vide les notes pour la nouvelle étape
+  
+  document.querySelector('.crm-content').scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('crm-date').focus();
+};
 
 window.editCRM = function(id) {
   const found = crmData.find(c => c.id === id);
@@ -2817,6 +2936,7 @@ window.editCRM = function(id) {
   document.getElementById('crm-name').value = found.name || '';
   document.getElementById('crm-contact-email').value = found.contactEmail || '';
   document.getElementById('crm-contact-phone').value = found.contactPhone || '';
+  document.getElementById('crm-status').value = found.status || 'attente';
   document.getElementById('crm-date').value = found.date || '';
   document.getElementById('crm-notes').value = found.notes || '';
   document.getElementById('crm-email').checked = !!found.autoEmail;
@@ -2851,6 +2971,7 @@ if(crmForm) {
     const name = document.getElementById('crm-name').value.trim();
     const contactEmail = document.getElementById('crm-contact-email').value.trim();
     const contactPhone = document.getElementById('crm-contact-phone').value.trim();
+    const status = document.getElementById('crm-status').value;
     const date = document.getElementById('crm-date').value;
     const notes = document.getElementById('crm-notes').value.trim();
     const autoEmail = document.getElementById('crm-email').checked;
@@ -2863,6 +2984,7 @@ if(crmForm) {
         found.name = name;
         found.contactEmail = contactEmail;
         found.contactPhone = contactPhone;
+        found.status = status;
         found.date = date;
         found.notes = notes;
         found.autoEmail = autoEmail;
@@ -2873,7 +2995,7 @@ if(crmForm) {
     } else {
       const contact = {
         id: uid(),
-        name, contactEmail, contactPhone, date, notes, autoEmail, autoSms, autoPhysique
+        name, contactEmail, contactPhone, status, date, notes, autoEmail, autoSms, autoPhysique
       };
       crmData.push(contact);
       crmForm.reset();
