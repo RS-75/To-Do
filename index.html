@@ -111,10 +111,6 @@
     background: rgba(0,0,0,0.6);
     color: #fff;
   }
-  [data-theme="glass"] .mic-fab.listening {
-    background: rgba(231, 76, 60, 0.8);
-    border-color: rgba(231, 76, 60, 0.9);
-  }
 
   #splashScreen {
     position: fixed; inset: 0; background: #ECE3D0; z-index: 9999;
@@ -238,7 +234,7 @@
     border:1px solid var(--line); border-radius:20px; padding:8px 12px 8px 10px; font-size:13px; white-space:nowrap;
   }
   .chip.done{opacity:.5;}
-  .chip .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); flex:0 0 auto;}
+  .chip .dot{width:7px; height:7px; border-radius:50%; background:var(--task-c, var(--accent)); flex:0 0 auto;}
   .chip .txt.done{text-decoration:line-through;}
   .chip .del{background:none; border:none; color:var(--ink-faint); font-size:15px; cursor:pointer; padding:0 0 0 2px; line-height:1;}
 
@@ -256,7 +252,7 @@
 
   .task-card{
     position:absolute; left:6px; right:10px; background:var(--bg); border:1px solid var(--line);
-    border-left:3px solid var(--accent); border-radius:10px; padding:7px 10px; font-size:13.5px;
+    border-left:3px solid var(--task-c, var(--accent)); border-radius:10px; padding:7px 10px; font-size:13.5px;
     line-height:1.25; display:flex; align-items:center; gap:8px; box-shadow:0 1px 3px rgba(0,0,0,.08);
   }
   .task-card.done{ border-left-color:var(--sage); opacity:.55; }
@@ -305,7 +301,7 @@
   .agenda-list{list-style:none; margin:0; padding:0;}
   .agenda-item{ display:flex; align-items:center; gap:10px; padding:11px 4px; border-bottom:1px solid var(--line); }
   .agenda-item:last-child{border-bottom:none;}
-  .agenda-item .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); flex:0 0 auto;}
+  .agenda-item .dot{width:7px; height:7px; border-radius:50%; background:var(--task-c, var(--accent)); flex:0 0 auto;}
   .agenda-item .txt{flex:1; font-size:14px;}
   .agenda-item .txt.done{text-decoration:line-through; color:var(--ink-soft);}
   .agenda-item .when{font-size:11.5px; color:var(--ink-soft); flex:0 0 auto;}
@@ -362,6 +358,13 @@
   .qa-row { display: flex; gap: 10px; margin-bottom: 12px; }
   .qa-row input[type=datetime-local] { flex: 1; margin-bottom: 0; }
   .qa-row select { flex: 0 0 110px; margin-bottom: 0; }
+
+  /* SELECTEUR DE COULEURS */
+  .color-picker { display: flex; gap: 12px; margin-bottom: 16px; padding: 4px 0; }
+  .color-swatch { display: block; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; position: relative; flex: 0 0 auto; }
+  .color-swatch input { display: none; }
+  .color-swatch span { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--c); border: 2px solid transparent; transition: transform 0.2s, box-shadow 0.2s; }
+  .color-swatch input:checked + span { transform: scale(1.3); border-color: var(--bg); box-shadow: 0 0 0 2px var(--ink); z-index: 2; }
 
   .btn{ width:100%; border:none; border-radius:10px; padding:13px; font-family:'Inter',sans-serif; font-size:15px; font-weight:600; cursor:pointer; }
   .btn-primary{background:var(--ink); color:var(--bg);}
@@ -632,6 +635,16 @@
     <input type="text" id="qaTaskInput" placeholder="Que faut-il faire ?" autocomplete="off">
     <textarea id="qaDescInput" placeholder="Description (optionnel)" rows="2"></textarea>
     
+    <div class="section-title" style="margin: 12px 0 8px;">Couleur de la tâche</div>
+    <div class="color-picker">
+      <label class="color-swatch" style="--c: var(--accent);"><input type="radio" name="qaColor" value="default" checked><span></span></label>
+      <label class="color-swatch" style="--c: #E74C3C;"><input type="radio" name="qaColor" value="red"><span></span></label>
+      <label class="color-swatch" style="--c: #3498DB;"><input type="radio" name="qaColor" value="blue"><span></span></label>
+      <label class="color-swatch" style="--c: #2ECC71;"><input type="radio" name="qaColor" value="green"><span></span></label>
+      <label class="color-swatch" style="--c: #F1C40F;"><input type="radio" name="qaColor" value="yellow"><span></span></label>
+      <label class="color-swatch" style="--c: #9B59B6;"><input type="radio" name="qaColor" value="purple"><span></span></label>
+    </div>
+    
     <div class="qa-row">
       <input type="datetime-local" id="qaDateInput">
       <select id="qaDurationSelect">
@@ -797,6 +810,16 @@ const LOCAL_KEY = 'journee_todos_v1';
 const START_HOUR = 6;
 const END_HOUR = 23;
 const ROW_H = 56;
+
+const COLORS = {
+  default: 'var(--accent)',
+  red: '#E74C3C',
+  blue: '#3498DB',
+  green: '#2ECC71',
+  yellow: '#F1C40F',
+  purple: '#9B59B6'
+};
+
 let tasks = [];
 let notifiedIds = new Set();
 let activeTab = 'today';
@@ -1084,6 +1107,7 @@ function checkRecurringTasks() {
             duration: t.duration,
             remindBefore: t.remindBefore,
             repeat: t.repeat,
+            color: t.color || 'default',
             done: false,
             createdAt: Date.now(),
             meetLink: null,
@@ -1218,6 +1242,7 @@ async function importGoogleEventsToTasks(events) {
         duration: duration,
         repeat: 'none',
         remindBefore: 15,
+        color: 'default',
         done: false,
         createdAt: Date.now(),
         meetLink: ev.meetLink || ev.htmlLink,
@@ -1527,9 +1552,9 @@ function renderTray(){
     <div class="section-title">Sans horaire (Restez appuyé pour glisser)</div>
     <div class="tray">
       ${unscheduled.map(t => `
-        <div class="chip task-row draggable-item ${t.done?'done':''}" data-id="${t.id}" draggable="true">
+        <div class="chip task-row draggable-item ${t.done?'done':''}" data-id="${t.id}" draggable="true" style="--task-c: ${COLORS[t.color] || 'var(--accent)'};">
           <button class="check-btn" data-action="toggle" data-id="${t.id}" style="all:unset;cursor:pointer;display:flex;">
-            <span class="dot" style="background:${t.done ? 'var(--sage)':'var(--accent)'};"></span>
+            <span class="dot"></span>
           </button>
           <span class="txt ${t.done?'done':''}">${escapeHtml(t.text)}</span>
           <button class="del" data-action="delete" data-id="${t.id}">×</button>
@@ -1569,6 +1594,7 @@ function renderTimeline(){
     const card = document.createElement('div');
     card.className = `task-card task-row draggable-item ${t.done?'done':''} ${late?'late':''}`;
     card.style.top = minuteOffset + 'px';
+    card.style.setProperty('--task-c', COLORS[t.color] || 'var(--accent)');
     card.dataset.id = t.id;
     card.draggable = true;
     card.innerHTML = `
@@ -1679,7 +1705,7 @@ function renderUpcoming(){
           timeStr += ' - ' + fmtTime(endDate);
         }
         return `
-        <li class="agenda-item task-row" data-id="${t.id}">
+        <li class="agenda-item task-row" data-id="${t.id}" style="--task-c: ${COLORS[t.color] || 'var(--accent)'};">
           <span class="dot"></span>
           <span class="txt">${escapeHtml(t.text)}${t.meetLink ? ` <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥</a>` : ''}</span>
           <span class="when">${timeStr}</span>
@@ -1850,8 +1876,8 @@ detailCheck.addEventListener('click', async ()=>{
   detailCheck.classList.toggle('done', t.done);
   if(t.done){
     cancelPushReminder(t.id);
-  } else {
-    if(t.due && !t.gcalEventId) syncTaskReminder(t);
+  } else if(t.due && !t.gcalEventId){
+    syncTaskReminder(t);
     schedulePushReminder(t);
   }
 });
@@ -1869,6 +1895,9 @@ detailDeleteBtn.addEventListener('click', async ()=>{
 function openQuickAdd(){
   qaBackdrop.classList.add('open');
   qaSheet.classList.add('open');
+  
+  document.querySelector('input[name="qaColor"][value="default"]').checked = true;
+  
   const now = new Date();
   const y = selectedDate.getFullYear();
   const m = String(selectedDate.getMonth()+1).padStart(2,'0');
@@ -1915,6 +1944,7 @@ qaForm.addEventListener('submit', async (e)=>{
 
   const duration = parseInt(qaDurationSelect.value, 10) || 30;
   const repeat = qaRepeatSelect.value;
+  const color = document.querySelector('input[name="qaColor"]:checked').value;
 
   const t = {
     id: uid(),
@@ -1924,6 +1954,7 @@ qaForm.addEventListener('submit', async (e)=>{
     duration: qaDateInput.value ? duration : null,
     repeat,
     remindBefore: parseInt(qaRemindSelect.value, 10) || 0,
+    color: color,
     done: false,
     createdAt: Date.now(),
     meetLink: null,
