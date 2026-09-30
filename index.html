@@ -111,6 +111,10 @@
     background: rgba(0,0,0,0.6);
     color: #fff;
   }
+  [data-theme="glass"] .mic-fab.listening {
+    background: rgba(231, 76, 60, 0.8);
+    border-color: rgba(231, 76, 60, 0.9);
+  }
 
   #splashScreen {
     position: fixed; inset: 0; background: #ECE3D0; z-index: 9999;
@@ -1197,7 +1201,6 @@ async function fetchGoogleEventsRange(timeMinIso, timeMaxIso){
     }));
 }
 
-/* IMPORT AUTOMATIQUE DES ÉVÉNEMENTS GOOGLE VERS LES TÂCHES */
 async function importGoogleEventsToTasks(events) {
   let updated = false;
   for (const ev of events) {
@@ -1229,7 +1232,6 @@ async function importGoogleEventsToTasks(events) {
   return updated;
 }
 
-/* SYNCHRO EN ARRIÈRE-PLAN POUR L'ONGLET "À VENIR" (14 prochains jours) */
 async function backgroundSyncGoogle() {
   if (!autoSyncEnabled || !localStorage.getItem('google_was_connected')) return;
   try {
@@ -1769,10 +1771,9 @@ document.addEventListener('click', async (e)=>{
       renderAll();
       await saveTask(t);
       if(t.done){
-        cancelReminder(t);
         cancelPushReminder(t.id);
-      } else if(t.due && !t.gcalEventId){
-        syncTaskReminder(t);
+      } else {
+        if (t.due && !t.gcalEventId) syncTaskReminder(t);
         schedulePushReminder(t);
       }
     } else if(action === 'delete'){
@@ -1848,10 +1849,9 @@ detailCheck.addEventListener('click', async ()=>{
   detailTitle.classList.toggle('done', t.done);
   detailCheck.classList.toggle('done', t.done);
   if(t.done){
-    cancelReminder(t);
     cancelPushReminder(t.id);
-  } else if(t.due && !t.gcalEventId){
-    syncTaskReminder(t);
+  } else {
+    if(t.due && !t.gcalEventId) syncTaskReminder(t);
     schedulePushReminder(t);
   }
 });
