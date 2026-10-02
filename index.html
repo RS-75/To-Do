@@ -449,6 +449,7 @@
   .btn{ width:100%; border:none; border-radius:10px; padding:13px; font-family:'Inter',sans-serif; font-size:15px; font-weight:600; cursor:pointer; }
   .btn-primary{background:var(--ink); color:var(--bg);}
   .btn-primary:disabled{opacity:.35;}
+  .btn-ghost{background:transparent; color:var(--ink-soft); border: 1px solid var(--line);}
 
   .detail-sheet{ padding-top:22px; max-height:85vh; overflow-y:auto; }
   .detail-header{ display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; }
@@ -520,7 +521,6 @@
   .qa-title{ font-family:'Fraunces',serif; font-size:19px; font-weight:500; margin:0 0 14px; }
   .qa-actions{ display:flex; gap:10px; margin-top:16px; }
   .qa-actions .btn{flex:1;}
-  .btn-ghost{background:transparent; color:var(--ink-soft);}
 
   .tabbar{
     position:fixed; left:0; right:0; bottom:0; background:var(--card); border-top:1px solid var(--line);
@@ -560,6 +560,12 @@
   .crm-toggles { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
   .crm-toggles .modern-toggle { flex: 1; min-width: 100px; margin: 0; background: var(--card-soft); }
   
+  .crm-attachment-area { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .crm-attachment-preview { display: flex; flex-wrap: wrap; gap: 8px; }
+  .crm-attachment-chip { position: relative; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--card-soft); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .crm-attachment-chip img { width: 100%; height: 100%; object-fit: cover; }
+  .crm-attachment-chip .del-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+
   .crm-list { display: flex; flex-direction: column; gap: 10px; }
   .crm-card {
     background: var(--card);
@@ -574,9 +580,12 @@
   }
   .crm-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
   .crm-name { font-weight: 600; font-size: 14px; color: var(--ink); }
+  .crm-company { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
   .crm-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
   .crm-contact-info { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; line-height: 1.5; }
   .crm-notes { font-size: 13px; color: var(--ink-soft); line-height: 1.4; white-space: pre-wrap; margin: 0; }
+  .crm-card-attachments { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .crm-card-attach-btn { background: var(--card-soft); border: 1px solid var(--line); color: var(--ink); padding: 4px 8px; border-radius: 6px; font-size: 11px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
   .crm-footer { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
   
   .crm-clone { position: absolute; right: 56px; bottom: 8px; background: none; border: none; color: var(--accent); font-size: 16px; cursor: pointer; padding: 0 4px; }
@@ -606,7 +615,6 @@
     </div>
     
     <div class="header-actions">
-      <!-- PASTILLE METEO -->
       <div class="weather-pill" id="weatherPill" style="display:none;" title="Cliquer pour actualiser la météo">
         <span id="weatherIcon">☀️</span>
         <span class="weather-temp" id="weatherTemp">--°</span>
@@ -706,7 +714,6 @@
       <div style="font-size: 12px; color: var(--ink-soft); text-align: right;" id="statsPercentage">0% de réussite</div>
     </div>
 
-    <!-- BOUTON POUR OUVRIR LA PAGE CRM -->
     <button class="modern-toggle" id="openCrmBtn" style="margin-top: 10px; width: 100%; padding: 16px;">
       <span style="display:flex; align-items:center; gap:10px; font-size: 15px;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -714,7 +721,6 @@
       </span>
       <span style="color:var(--ink-faint); font-size: 20px; line-height: 1;">›</span>
     </button>
-
   </section>
 
   <section class="panel" id="panel-account">
@@ -913,7 +919,7 @@
 <!-- NOUVELLE PAGE PLEIN ÉCRAN: TRACK RECORD CRM -->
 <div id="crmPage" class="full-page-overlay">
   <div class="crm-header">
-    <button id="closeCrmBtn" class="btn-ghost">‹ Retour</button>
+    <button id="closeCrmBtn" class="btn-ghost" style="border:none; padding:8px;">‹ Retour</button>
     <h2>Track Record</h2>
     <div style="width: 60px;"></div>
   </div>
@@ -937,28 +943,44 @@
 
     <!-- FORMULAIRE CRM -->
     <form id="crm-form" class="crm-form">
+      
+      <!-- NOMS & STATUT -->
       <div style="display:flex; gap:8px;">
-        <input type="text" id="crm-name" placeholder="Nom du contact ou projet" required style="flex:2;" />
-        <select id="crm-status" required style="flex:1; padding:0 8px; font-size:13px;">
+        <input type="text" id="crm-name" placeholder="Nom du contact" required style="flex:1;" />
+        <input type="text" id="crm-company" placeholder="Entreprise (Option)" style="flex:1;" />
+      </div>
+      
+      <!-- COORDONNÉES & STATUT -->
+      <div style="display:flex; gap:8px;">
+        <input type="email" id="crm-contact-email" placeholder="Email" style="flex:1;" />
+        <input type="tel" id="crm-contact-phone" placeholder="Téléphone" style="flex:1;" />
+      </div>
+
+      <div style="display:flex; gap:8px; align-items: center;">
+        <select id="crm-status" required style="flex:1; padding:12px 13px; font-size:14px;">
           <option value="acontacter">À contacter</option>
           <option value="attente" selected>En attente</option>
           <option value="rdv">Entretien/Rdv</option>
           <option value="conclu">Conclu/Accepté</option>
           <option value="refuse">Refusé</option>
         </select>
-      </div>
-      
-      <div style="display:flex; gap:8px;">
-        <input type="email" id="crm-contact-email" placeholder="Email" style="flex:1;" />
-        <input type="tel" id="crm-contact-phone" placeholder="Téléphone" style="flex:1;" />
+        <input type="datetime-local" id="crm-date" required style="flex:1;" />
       </div>
 
-      <div class="qa-row" style="margin-bottom:0;">
-        <input type="datetime-local" id="crm-date" required />
-      </div>
       <textarea id="crm-notes" placeholder="Notes de suivi..." rows="2"></textarea>
       
-      <div class="crm-toggles">
+      <!-- PIÈCES JOINTES (NATIVE iOS) -->
+      <div class="crm-attachment-area">
+        <label for="crm-file-upload" class="btn btn-ghost" style="display:flex; align-items:center; justify-content:center; gap:8px; border: 1px dashed var(--accent); color: var(--accent); padding: 10px; cursor: pointer;">
+          <span>📎 Joindre Photo ou Fichier</span>
+        </label>
+        <!-- Sur iOS, ce bouton ouvre Camera / Photothèque / Fichiers -->
+        <input type="file" id="crm-file-upload" accept="image/*,application/pdf" style="display:none;" multiple>
+        <div id="crm-file-preview" class="crm-attachment-preview"></div>
+      </div>
+      
+      <!-- AUTOMATISATIONS -->
+      <div class="crm-toggles" style="margin-top: 8px;">
         <label class="modern-toggle small">
           <span style="display:flex; align-items:center; gap:8px;">📧 Prép. Email</span>
           <input type="checkbox" id="crm-email" />
@@ -977,7 +999,7 @@
       </div>
       
       <div style="display: flex; gap: 10px; margin-top: 8px;">
-        <button type="button" class="btn btn-ghost" id="crm-cancel-btn" style="display:none; padding:12px;" onclick="cancelEditCRM()">Annuler</button>
+        <button type="button" class="btn btn-ghost" id="crm-cancel-btn" style="display:none; padding:12px; border: 1px solid var(--line);" onclick="cancelEditCRM()">Annuler</button>
         <button type="submit" class="btn btn-primary" id="crm-submit-btn" style="flex:2;">Ajouter au suivi</button>
       </div>
     </form>
@@ -1168,7 +1190,7 @@ const WMO_WEATHER_ICONS = {
   71: '🌨️', 73: '🌨', 75: '❄️', 77: '❄️',
   80: '🌦️', 81: '🌧️', 82: '🌧️',
   85: '🌨️', 86: '❄️',
-  95: '⛈️', 96: '⛈️️', 99: '⛈️'
+  95: '⛈️️', 96: '⛈', 99: '⛈️'
 };
 
 async function fetchWeatherForLocation(lat, lon) {
@@ -2754,12 +2776,13 @@ notifBtn && notifBtn.addEventListener('click', async ()=>{
   if(ok) notifHint.style.display = 'none';
 });
 
-/* --- LOGIQUE CRM (Plein Écran avec Édition, Filtres, Bilan, Statuts) --- */
+/* --- LOGIQUE CRM (Plein Écran avec Édition, Filtres, Bilan, Statuts, Pièces Jointes) --- */
 const CRM_KEY = 'journee_crm_v1';
 let crmData = [];
 let editingCrmId = null;
 let currentCrmFilter = 'all';
 let currentCrmSearch = '';
+let pendingAttachments = [];
 
 const CRM_STATUSES = {
   'acontacter': { label: 'À contacter', color: 'var(--ink-soft)' },
@@ -2804,6 +2827,80 @@ document.querySelectorAll('.crm-filter-btn').forEach(btn => {
   });
 });
 
+// GESTION DES PIÈCES JOINTES (COMPRESSION)
+const fileUploadInput = document.getElementById('crm-file-upload');
+const filePreviewArea = document.getElementById('crm-file-preview');
+
+function compressImage(file, callback) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxDim = 800; // Taille max pour éviter de crasher le localStorage
+      let w = img.width; let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = (h/w)*maxDim; w = maxDim; }
+        else { w = (w/h)*maxDim; h = maxDim; }
+      }
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.6)); // Compression 60%
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function processFiles(files) {
+  Array.from(files).forEach(file => {
+    if (file.type.startsWith('image/')) {
+      compressImage(file, (base64Data) => {
+        pendingAttachments.push({ id: uid(), name: file.name, type: 'image', data: base64Data });
+        renderPendingAttachments();
+      });
+    } else {
+      // Pour les PDF ou autres, on convertit directement (Risque si fichier très lourd)
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        pendingAttachments.push({ id: uid(), name: file.name, type: 'file', data: e.target.result });
+        renderPendingAttachments();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+if(fileUploadInput) {
+  fileUploadInput.addEventListener('change', (e) => {
+    processFiles(e.target.files);
+    fileUploadInput.value = ''; // Reset pour pouvoir re-sélectionner le même fichier
+  });
+}
+
+function renderPendingAttachments() {
+  filePreviewArea.innerHTML = pendingAttachments.map(att => {
+    if(att.type === 'image') {
+      return `<div class="crm-attachment-chip">
+        <img src="${att.data}" alt="pj">
+        <button type="button" class="del-btn" onclick="removePendingAttachment('${att.id}')">×</button>
+      </div>`;
+    } else {
+      return `<div class="crm-attachment-chip" style="font-size:10px; flex-direction:column; padding:4px; text-align:center;">
+        📄<br><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;">${escapeHtml(att.name)}</span>
+        <button type="button" class="del-btn" onclick="removePendingAttachment('${att.id}')">×</button>
+      </div>`;
+    }
+  }).join('');
+}
+
+window.removePendingAttachment = function(id) {
+  pendingAttachments = pendingAttachments.filter(a => a.id !== id);
+  renderPendingAttachments();
+};
+
+
 function loadCRM() {
   try {
     const raw = localStorage.getItem(CRM_KEY);
@@ -2813,8 +2910,12 @@ function loadCRM() {
 }
 
 function saveCRM() {
-  localStorage.setItem(CRM_KEY, JSON.stringify(crmData));
-  renderCRM();
+  try {
+    localStorage.setItem(CRM_KEY, JSON.stringify(crmData));
+    renderCRM();
+  } catch(e) {
+    alert("Erreur de sauvegarde. L'application est pleine (les pièces jointes prennent trop de place). Supprime des anciennes fiches.");
+  }
 }
 
 function renderCRM() {
@@ -2845,6 +2946,7 @@ function renderCRM() {
   if (currentCrmSearch) {
     filtered = filtered.filter(c => 
       (c.name || '').toLowerCase().includes(currentCrmSearch) || 
+      (c.company || '').toLowerCase().includes(currentCrmSearch) || 
       (c.notes || '').toLowerCase().includes(currentCrmSearch) ||
       (c.contactEmail || '').toLowerCase().includes(currentCrmSearch)
     );
@@ -2876,6 +2978,17 @@ function renderCRM() {
       </div>`;
     }
 
+    let attHtml = '';
+    if(c.attachments && c.attachments.length > 0) {
+      attHtml = `<div class="crm-card-attachments">
+        ${c.attachments.map(a => `
+          <a href="${a.data}" download="${escapeHtml(a.name)}" class="crm-card-attach-btn">
+            ${a.type === 'image' ? '🖼️' : '📄'} ${escapeHtml(a.name).substring(0, 15)}
+          </a>
+        `).join('')}
+      </div>`;
+    }
+
     let emailBadge = c.autoEmail ? 
       (c.contactEmail ? `<a href="mailto:${escapeHtml(c.contactEmail)}" class="crm-badge" style="background:#e5f1ff;color:#007aff;text-decoration:none;">📧 Rédiger Mail</a>` : `<span class="crm-badge" style="background:var(--card-soft);color:var(--ink-soft);">📧 Email (sans adresse)</span>`) : '';
       
@@ -2891,7 +3004,10 @@ function renderCRM() {
     return `
       <div class="crm-card" style="border-left-color: ${currentStatus.color};">
         <div class="crm-card-header">
-          <div class="crm-name">${escapeHtml(c.name)}</div>
+          <div>
+            <div class="crm-name">${escapeHtml(c.name)}</div>
+            ${c.company ? `<div class="crm-company">${escapeHtml(c.company)}</div>` : ''}
+          </div>
           <div class="crm-badge" style="background:var(--card-soft);color:var(--ink-soft);">⏳ ${dateStr}</div>
         </div>
         <div style="font-size: 11px; font-weight: 600; color: ${currentStatus.color}; margin-bottom: 8px; text-transform: uppercase;">
@@ -2899,6 +3015,7 @@ function renderCRM() {
         </div>
         ${infoHtml}
         <p class="crm-notes">${escapeHtml(c.notes)}</p>
+        ${attHtml}
         <div class="crm-footer">
           ${emailBadge}
           ${smsBadge}
@@ -2916,14 +3033,18 @@ function renderCRM() {
 window.cloneCRM = function(id) {
   const found = crmData.find(c => c.id === id);
   if(!found) return;
-  cancelEditCRM(); // On s'assure de ne pas écraser l'ancien
+  cancelEditCRM();
   
   document.getElementById('crm-name').value = found.name || '';
+  document.getElementById('crm-company').value = found.company || '';
   document.getElementById('crm-contact-email').value = found.contactEmail || '';
   document.getElementById('crm-contact-phone').value = found.contactPhone || '';
   document.getElementById('crm-status').value = found.status || 'attente';
-  document.getElementById('crm-notes').value = ''; // On vide les notes pour la nouvelle étape
+  document.getElementById('crm-notes').value = ''; 
   
+  pendingAttachments = [];
+  renderPendingAttachments();
+
   document.querySelector('.crm-content').scrollTo({ top: 0, behavior: 'smooth' });
   document.getElementById('crm-date').focus();
 };
@@ -2934,6 +3055,7 @@ window.editCRM = function(id) {
   
   editingCrmId = id;
   document.getElementById('crm-name').value = found.name || '';
+  document.getElementById('crm-company').value = found.company || '';
   document.getElementById('crm-contact-email').value = found.contactEmail || '';
   document.getElementById('crm-contact-phone').value = found.contactPhone || '';
   document.getElementById('crm-status').value = found.status || 'attente';
@@ -2943,6 +3065,9 @@ window.editCRM = function(id) {
   document.getElementById('crm-sms').checked = !!found.autoSms;
   document.getElementById('crm-physique').checked = !!found.autoPhysique;
   
+  pendingAttachments = found.attachments ? [...found.attachments] : [];
+  renderPendingAttachments();
+
   document.getElementById('crm-submit-btn').textContent = 'Modifier le suivi';
   document.getElementById('crm-cancel-btn').style.display = 'block';
   
@@ -2954,6 +3079,10 @@ window.cancelEditCRM = function() {
   editingCrmId = null;
   const form = document.getElementById('crm-form');
   if(form) form.reset();
+  
+  pendingAttachments = [];
+  renderPendingAttachments();
+
   document.getElementById('crm-submit-btn').textContent = 'Ajouter au suivi';
   document.getElementById('crm-cancel-btn').style.display = 'none';
 };
@@ -2969,6 +3098,7 @@ if(crmForm) {
   crmForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('crm-name').value.trim();
+    const company = document.getElementById('crm-company').value.trim();
     const contactEmail = document.getElementById('crm-contact-email').value.trim();
     const contactPhone = document.getElementById('crm-contact-phone').value.trim();
     const status = document.getElementById('crm-status').value;
@@ -2982,6 +3112,7 @@ if(crmForm) {
       const found = crmData.find(c => c.id === editingCrmId);
       if (found) {
         found.name = name;
+        found.company = company;
         found.contactEmail = contactEmail;
         found.contactPhone = contactPhone;
         found.status = status;
@@ -2990,15 +3121,19 @@ if(crmForm) {
         found.autoEmail = autoEmail;
         found.autoSms = autoSms;
         found.autoPhysique = autoPhysique;
+        found.attachments = [...pendingAttachments];
       }
       cancelEditCRM();
     } else {
       const contact = {
         id: uid(),
-        name, contactEmail, contactPhone, status, date, notes, autoEmail, autoSms, autoPhysique
+        name, company, contactEmail, contactPhone, status, date, notes, autoEmail, autoSms, autoPhysique,
+        attachments: [...pendingAttachments]
       };
       crmData.push(contact);
       crmForm.reset();
+      pendingAttachments = [];
+      renderPendingAttachments();
     }
     
     saveCRM();
