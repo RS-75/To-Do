@@ -615,6 +615,7 @@
     </div>
     
     <div class="header-actions">
+      <!-- PASTILLE METEO -->
       <div class="weather-pill" id="weatherPill" style="display:none;" title="Cliquer pour actualiser la météo">
         <span id="weatherIcon">☀️</span>
         <span class="weather-temp" id="weatherTemp">--°</span>
@@ -714,6 +715,7 @@
       <div style="font-size: 12px; color: var(--ink-soft); text-align: right;" id="statsPercentage">0% de réussite</div>
     </div>
 
+    <!-- BOUTON POUR OUVRIR LA PAGE CRM -->
     <button class="modern-toggle" id="openCrmBtn" style="margin-top: 10px; width: 100%; padding: 16px;">
       <span style="display:flex; align-items:center; gap:10px; font-size: 15px;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -725,9 +727,15 @@
 
   <section class="panel" id="panel-account">
     <div class="account-card">
-      <img id="gAvatar" class="g-avatar" src="" alt="" style="display:none;">
-      <div id="gAvatarPlaceholder" class="g-avatar g-avatar-placeholder">?</div>
-      <div class="g-name" id="gName">Non connecté</div>
+      <label for="custom-avatar-upload" style="cursor:pointer; display:inline-block; position:relative; margin-bottom: 14px;">
+        <img id="gAvatar" class="g-avatar" src="" alt="" style="display:none; margin:0;">
+        <div id="gAvatarPlaceholder" class="g-avatar g-avatar-placeholder" style="margin:0;">?</div>
+        <!-- Petite icône appareil photo pour indiquer que c'est modifiable -->
+        <div style="position:absolute; bottom:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:12px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">📷</div>
+      </label>
+      <input type="file" id="custom-avatar-upload" accept="image/*" style="display:none;">
+
+      <div class="g-name" id="gName" style="margin-top:0;">Non connecté</div>
       <div class="g-email" id="gEmail"></div>
       <button type="button" class="btn btn-primary" id="gAccountBtn" style="margin-top:16px;">Se connecter à Google</button>
     </div>
@@ -911,7 +919,9 @@
     <span>Bilan</span>
   </button>
   <button class="tab-btn" data-tab="account" style="position:relative;">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
+    <!-- NOUVEAU: La miniature pour la photo de profil dans la Tab Bar -->
+    <img id="tabAvatar" src="" alt="Profil" style="width:21px; height:21px; border-radius:50%; object-fit:cover; display:none; margin-bottom: 2px; border:1px solid var(--line);">
+    <svg id="tabAvatarSvg" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
     <span>Compte</span>
   </button>
 </nav>
@@ -974,7 +984,6 @@
         <label for="crm-file-upload" class="btn btn-ghost" style="display:flex; align-items:center; justify-content:center; gap:8px; border: 1px dashed var(--accent); color: var(--accent); padding: 10px; cursor: pointer;">
           <span>📎 Joindre Photo ou Fichier</span>
         </label>
-        <!-- Sur iOS, ce bouton ouvre Camera / Photothèque / Fichiers -->
         <input type="file" id="crm-file-upload" accept="image/*,application/pdf" style="display:none;" multiple>
         <div id="crm-file-preview" class="crm-attachment-preview"></div>
       </div>
@@ -1190,7 +1199,7 @@ const WMO_WEATHER_ICONS = {
   71: '🌨️', 73: '🌨', 75: '❄️', 77: '❄️',
   80: '🌦️', 81: '🌧️', 82: '🌧️',
   85: '🌨️', 86: '❄️',
-  95: '⛈️️', 96: '⛈', 99: '⛈️'
+  95: '⛈', 96: '⛈', 99: '⛈️'
 };
 
 async function fetchWeatherForLocation(lat, lon) {
@@ -1482,6 +1491,43 @@ function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; 
 function isSameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
 function fmtTime(iso){ return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 function fmtDateShort(iso){ const d=new Date(iso); return d.toLocaleDateString('fr-FR',{weekday:'short', day:'numeric', month:'short'}) + ' · ' + fmtTime(iso); }
+
+/* --- COMPRESSION GLOBALE IMAGE --- */
+function compressImage(file, callback, maxDim = 800) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width; let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = (h/w)*maxDim; w = maxDim; }
+        else { w = (w/h)*maxDim; h = maxDim; }
+      }
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.6));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+const customAvatarUpload = document.getElementById('custom-avatar-upload');
+const CUSTOM_AVATAR_KEY = 'journee_custom_avatar';
+
+if(customAvatarUpload) {
+  customAvatarUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    compressImage(file, (base64Data) => {
+      localStorage.setItem(CUSTOM_AVATAR_KEY, base64Data);
+      const isConnected = localStorage.getItem('google_was_connected') === '1';
+      renderAccountUI(isConnected, loadCachedProfile());
+    }, 400); // Format avatar plus petit
+  });
+}
 
 async function loadTasks(){
   try{
@@ -2455,26 +2501,40 @@ function clearCachedProfile(){
 }
 
 function renderAccountUI(connected, profile){
+  const customAvatar = localStorage.getItem(CUSTOM_AVATAR_KEY);
+  const avatarSrc = customAvatar || (profile && profile.picture);
+
   if(connected && profile){
     gName.textContent = profile.name || 'Connecté';
     gEmail.textContent = profile.email || '';
-    if(profile.picture){
-      gAvatar.src = profile.picture;
-      gAvatar.style.display = 'block';
-      gAvatarPlaceholder.style.display = 'none';
-    } else {
-      gAvatar.style.display = 'none';
-      gAvatarPlaceholder.style.display = 'flex';
-    }
     gAccountBtn.textContent = 'Se déconnecter';
     gAccountBtn.classList.add('connected');
   } else {
     gName.textContent = 'Non connecté';
     gEmail.textContent = '';
-    gAvatar.style.display = 'none';
-    gAvatarPlaceholder.style.display = 'flex';
     gAccountBtn.textContent = 'Se connecter à Google';
     gAccountBtn.classList.remove('connected');
+  }
+
+  const tabAvatar = document.getElementById('tabAvatar');
+  const tabAvatarSvg = document.getElementById('tabAvatarSvg');
+
+  if(avatarSrc){
+    gAvatar.src = avatarSrc;
+    gAvatar.style.display = 'block';
+    gAvatarPlaceholder.style.display = 'none';
+    if(tabAvatar && tabAvatarSvg) {
+      tabAvatar.src = avatarSrc;
+      tabAvatar.style.display = 'block';
+      tabAvatarSvg.style.display = 'none';
+    }
+  } else {
+    gAvatar.style.display = 'none';
+    gAvatarPlaceholder.style.display = 'flex';
+    if(tabAvatar && tabAvatarSvg) {
+      tabAvatar.style.display = 'none';
+      tabAvatarSvg.style.display = 'block';
+    }
   }
 }
 
@@ -2831,28 +2891,6 @@ document.querySelectorAll('.crm-filter-btn').forEach(btn => {
 const fileUploadInput = document.getElementById('crm-file-upload');
 const filePreviewArea = document.getElementById('crm-file-preview');
 
-function compressImage(file, callback) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const maxDim = 800; // Taille max pour éviter de crasher le localStorage
-      let w = img.width; let h = img.height;
-      if (w > maxDim || h > maxDim) {
-        if (w > h) { h = (h/w)*maxDim; w = maxDim; }
-        else { w = (w/h)*maxDim; h = maxDim; }
-      }
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      callback(canvas.toDataURL('image/jpeg', 0.6)); // Compression 60%
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
 function processFiles(files) {
   Array.from(files).forEach(file => {
     if (file.type.startsWith('image/')) {
@@ -2861,7 +2899,6 @@ function processFiles(files) {
         renderPendingAttachments();
       });
     } else {
-      // Pour les PDF ou autres, on convertit directement (Risque si fichier très lourd)
       const reader = new FileReader();
       reader.onload = (e) => {
         pendingAttachments.push({ id: uid(), name: file.name, type: 'file', data: e.target.result });
@@ -2875,7 +2912,7 @@ function processFiles(files) {
 if(fileUploadInput) {
   fileUploadInput.addEventListener('change', (e) => {
     processFiles(e.target.files);
-    fileUploadInput.value = ''; // Reset pour pouvoir re-sélectionner le même fichier
+    fileUploadInput.value = ''; 
   });
 }
 
@@ -3033,7 +3070,7 @@ function renderCRM() {
 window.cloneCRM = function(id) {
   const found = crmData.find(c => c.id === id);
   if(!found) return;
-  cancelEditCRM();
+  cancelEditCRM(); 
   
   document.getElementById('crm-name').value = found.name || '';
   document.getElementById('crm-company').value = found.company || '';
