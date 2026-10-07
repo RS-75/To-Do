@@ -790,6 +790,18 @@
   #crmMicBtn.recording{ background: rgba(231,76,60,.18); animation: crmMicPulse 1.1s ease-in-out infinite; }
   @keyframes crmMicPulse{ 0%,100%{ box-shadow: 0 0 0 0 rgba(231,76,60,.45); } 50%{ box-shadow: 0 0 0 9px rgba(231,76,60,0); } }
   .crm-mic-hint{ font-size: 12px; color: var(--rust); margin-top: 6px; font-weight: 500; }
+
+  /* --- Correctif espacement des bulles --- */
+  #sgBriefBody, #sgStBody{ display: flex; flex-direction: column; gap: 16px; }
+  .sg-scroll{ gap: 16px; padding-left: 18px; padding-right: 18px; }
+  .sg-panel{ padding: 18px; }
+  .sg-chips{ gap: 12px; }
+  .sg-chip{ padding: 14px 8px; border-radius: 20px; }
+  .sg-tiles{ gap: 12px; margin-bottom: 16px; }
+  .sg-cta{ margin-top: 10px; }
+  .sg-item{ padding: 11px 2px; }
+  .sg-sec-row{ margin: 12px 0; }
+  .sg-note{ padding: 6px 10px; }
 </style>
 </head>
 <body>
