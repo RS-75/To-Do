@@ -619,6 +619,177 @@
   .crm-clone { position: absolute; right: 56px; bottom: 8px; background: none; border: none; color: var(--accent); font-size: 16px; cursor: pointer; padding: 0 4px; }
   .crm-edit { position: absolute; right: 32px; bottom: 8px; background: none; border: none; color: var(--accent); font-size: 14px; cursor: pointer; padding: 0 4px; }
   .crm-del { position: absolute; right: 8px; bottom: 8px; background: none; border: none; color: var(--rust); font-size: 18px; cursor: pointer; padding: 0 4px; }
+
+  /* =====================================================
+     SUPER-GLASS : briefing du matin, météo détaillée, temps d'écran
+     ===================================================== */
+  :root{
+    --sg-fill: rgba(255,255,255,.52);
+    --sg-fill-strong: rgba(255,255,255,.72);
+    --sg-edge: rgba(255,255,255,.7);
+    --sg-shadow: 0 20px 60px rgba(60,45,15,.22);
+    --sg-scrim: rgba(236,227,208,.38);
+    --sg-orb-a: rgba(184,134,59,.55);
+    --sg-orb-b: rgba(91,127,166,.50);
+    --sg-orb-c: rgba(113,128,95,.45);
+    --sg-track: rgba(59,50,38,.10);
+  }
+  [data-theme="dark"], [data-theme="glass-dark"]{
+    --sg-fill: rgba(34,34,40,.50);
+    --sg-fill-strong: rgba(44,44,52,.72);
+    --sg-edge: rgba(255,255,255,.16);
+    --sg-shadow: 0 20px 60px rgba(0,0,0,.55);
+    --sg-scrim: rgba(0,0,0,.45);
+    --sg-orb-a: rgba(212,163,115,.40);
+    --sg-orb-b: rgba(117,155,202,.38);
+    --sg-orb-c: rgba(141,163,122,.30);
+    --sg-track: rgba(255,255,255,.12);
+  }
+  [data-theme="glass-light"]{
+    --sg-scrim: rgba(219,234,254,.40);
+    --sg-orb-a: rgba(59,130,246,.45);
+    --sg-orb-b: rgba(147,197,253,.65);
+    --sg-orb-c: rgba(37,99,235,.28);
+    --sg-track: rgba(30,58,138,.10);
+  }
+
+  .sg-overlay{
+    position: fixed; inset: 0; z-index: 200; display: flex; overflow: hidden;
+    background: var(--sg-scrim);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .35s ease, visibility .35s;
+    color: var(--ink);
+  }
+  .sg-overlay.open{ opacity: 1; visibility: visible; pointer-events: auto; }
+  #sgWeather{ z-index: 210; }
+
+  .sg-page::before, .sg-page::after{
+    content: ""; position: absolute; border-radius: 50%; filter: blur(50px); pointer-events: none; z-index: 0;
+  }
+  .sg-page::before{ width: 300px; height: 300px; background: var(--sg-orb-a); top: -70px; left: -90px; animation: sgFloatA 14s ease-in-out infinite alternate; }
+  .sg-page::after{ width: 340px; height: 340px; background: var(--sg-orb-b); bottom: -110px; right: -110px; animation: sgFloatB 17s ease-in-out infinite alternate; }
+  @keyframes sgFloatA{ to{ transform: translate(70px, 90px) scale(1.15); } }
+  @keyframes sgFloatB{ to{ transform: translate(-60px, -80px) scale(1.1); } }
+
+  .sg-scroll{
+    position: relative; z-index: 1; width: 100%; max-width: 460px; margin: 0 auto;
+    padding: max(18px, env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .sg-center{ align-items: center; justify-content: center; padding: 18px; }
+
+  .sg-panel, .sg-card{
+    background: var(--sg-fill);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--sg-edge);
+    border-radius: 24px;
+    box-shadow: var(--sg-shadow), inset 0 1px 0 rgba(255,255,255,.45);
+    padding: 16px;
+  }
+  .sg-card{
+    width: 100%; max-width: 400px; max-height: 92dvh; overflow-y: auto; position: relative;
+    background: var(--sg-fill-strong);
+    transform: translateY(24px) scale(.96); transition: transform .4s cubic-bezier(.2,.9,.3,1.1);
+  }
+  .sg-overlay.open .sg-card{ transform: none; }
+
+  .sg-rise{ opacity: 0; }
+  .sg-overlay.open .sg-rise{ animation: sgUp .55s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms + 80ms); }
+  @keyframes sgUp{ from{ opacity: 0; transform: translateY(18px); } to{ opacity: 1; transform: none; } }
+
+  .sg-topbar{ display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
+  .sg-topbar h2{ font-family: 'Fraunces', serif; font-weight: 500; font-size: 19px; margin: 0; }
+  .sg-back, .sg-x{
+    background: var(--sg-fill); border: 1px solid var(--sg-edge); color: var(--ink);
+    border-radius: 20px; padding: 7px 14px; font-size: 14px; font-weight: 500; cursor: pointer;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .sg-x{ width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .sg-card .sg-x{ position: absolute; top: 12px; right: 12px; z-index: 2; }
+
+  .sg-eyebrow{ font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); font-weight: 600; margin-bottom: 8px; }
+  .sg-hello{ font-family: 'Fraunces', serif; font-size: 36px; font-weight: 500; line-height: 1.05; margin: 8px 0 4px; }
+  .sg-date{ font-size: 14px; color: var(--ink-soft); text-transform: capitalize; }
+
+  .sg-wx-row{ display: flex; align-items: center; gap: 14px; cursor: pointer; }
+  .sg-wx-ico{ font-size: 40px; line-height: 1; }
+  .sg-wx-main{ flex: 1; min-width: 0; }
+  .sg-wx-temp{ font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1; }
+  .sg-wx-sub{ font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; }
+  .sg-chev{ color: var(--ink-faint); font-size: 22px; }
+
+  .sg-chips{ display: flex; gap: 8px; }
+  .sg-chip{ flex: 1; text-align: center; padding: 12px 6px; border-radius: 18px; background: var(--sg-fill); border: 1px solid var(--sg-edge); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .sg-chip b{ display: block; font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; }
+  .sg-chip span{ font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); font-weight: 600; }
+
+  .sg-list{ display: flex; flex-direction: column; gap: 4px; }
+  .sg-item{ display: flex; align-items: center; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--sg-track); font-size: 14px; }
+  .sg-item:last-child{ border-bottom: none; }
+  .sg-item .t{ min-width: 46px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; font-size: 13px; }
+  .sg-item .x{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sg-item .s{ font-size: 11.5px; color: var(--ink-soft); }
+  .sg-empty{ font-size: 14px; color: var(--ink-soft); padding: 8px 0; text-align: center; line-height: 1.5; }
+
+  .sg-cta{
+    margin-top: 6px; width: 100%; border: none; border-radius: 18px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: #fff; box-shadow: 0 10px 28px var(--accent-soft), inset 0 1px 0 rgba(255,255,255,.35);
+    font-family: 'Inter', sans-serif;
+  }
+  .sg-cta:active{ transform: scale(.98); }
+
+  /* Météo détaillée */
+  .sg-wxd-head{ text-align: center; padding: 6px 0 14px; }
+  .sg-wxd-city{ font-size: 14px; font-weight: 600; }
+  .sg-wxd-ico{ font-size: 60px; line-height: 1.1; margin-top: 4px; }
+  .sg-wxd-temp{ font-family: 'Fraunces', serif; font-size: 52px; font-weight: 500; line-height: 1; }
+  .sg-wxd-label{ font-size: 14px; color: var(--ink-soft); margin-top: 4px; }
+  .sg-wxd-minmax{ font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+  .sg-tiles{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .sg-tile{ background: var(--sg-fill); border: 1px solid var(--sg-edge); border-radius: 18px; padding: 12px; }
+  .sg-tile .k{ font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); font-weight: 600; margin-bottom: 6px; }
+  .sg-tile .v{ font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; line-height: 1.1; }
+  .sg-tile .v small{ font-family: 'Inter', sans-serif; font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+  .sg-tile .d{ font-size: 11.5px; color: var(--ink-soft); margin-top: 4px; line-height: 1.35; }
+  .sg-bar{ height: 6px; border-radius: 6px; background: var(--sg-track); margin-top: 8px; overflow: hidden; }
+  .sg-bar > i{ display: block; height: 100%; border-radius: 6px; background: var(--accent); transition: width .6s ease; }
+  .sg-hours{ display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin: 0 -4px; -webkit-overflow-scrolling: touch; }
+  .sg-hour{ flex: 0 0 auto; min-width: 54px; text-align: center; padding: 10px 6px; border-radius: 16px; background: var(--sg-fill); border: 1px solid var(--sg-edge); font-size: 12px; }
+  .sg-hour .h{ color: var(--ink-soft); font-weight: 600; }
+  .sg-hour .i{ font-size: 20px; margin: 4px 0; }
+  .sg-hour .tp{ font-weight: 600; font-size: 14px; }
+  .sg-hour .p{ color: var(--gcal); font-size: 11px; margin-top: 2px; font-weight: 600; }
+  .sg-refresh{ width: 100%; margin-top: 10px; background: var(--sg-fill); border: 1px solid var(--sg-edge); color: var(--ink); border-radius: 14px; padding: 11px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .sg-updated{ font-size: 11px; color: var(--ink-faint); text-align: center; margin-top: 8px; }
+
+  /* Temps d'écran */
+  .sg-st-big{ font-family: 'Fraunces', serif; font-size: 48px; font-weight: 500; line-height: 1; }
+  .sg-st-delta{ font-size: 13px; margin-top: 6px; color: var(--ink-soft); }
+  .sg-st-delta.up{ color: var(--rust); }
+  .sg-st-delta.down{ color: var(--sage); }
+  .sg-bars{ display: flex; align-items: flex-end; gap: 8px; height: 150px; }
+  .sg-bcol{ flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 5px; }
+  .sg-bcol .val{ font-size: 10px; color: var(--ink-soft); font-weight: 600; white-space: nowrap; }
+  .sg-bcol .bar{ width: 100%; max-width: 30px; border-radius: 9px 9px 5px 5px; background: var(--sg-track); min-height: 4px; transition: height .6s cubic-bezier(.2,.8,.2,1); }
+  .sg-bcol.today .bar{ background: var(--accent); box-shadow: 0 4px 14px var(--accent-soft); }
+  .sg-bcol .lbl{ font-size: 11px; color: var(--ink-soft); text-transform: capitalize; }
+  .sg-bcol.today .lbl{ color: var(--ink); font-weight: 700; }
+  .sg-sec-row{ display: flex; align-items: center; gap: 10px; font-size: 13px; margin: 9px 0; }
+  .sg-sec-row .n{ width: 64px; color: var(--ink-soft); }
+  .sg-sec-row .bar{ flex: 1; height: 8px; border-radius: 8px; background: var(--sg-track); overflow: hidden; }
+  .sg-sec-row .bar i{ display: block; height: 100%; background: var(--accent); border-radius: 8px; }
+  .sg-sec-row .d{ width: 54px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sg-note{ font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; text-align: center; padding: 4px 8px; }
+
+  /* Mémo vocal CRM */
+  #crmMicBtn{ width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  #crmMicBtn.recording{ background: rgba(231,76,60,.18); animation: crmMicPulse 1.1s ease-in-out infinite; }
+  @keyframes crmMicPulse{ 0%,100%{ box-shadow: 0 0 0 0 rgba(231,76,60,.45); } 50%{ box-shadow: 0 0 0 9px rgba(231,76,60,0); } }
+  .crm-mic-hint{ font-size: 12px; color: var(--rust); margin-top: 6px; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -760,6 +931,22 @@
       <span style="display:flex; align-items:center; gap:10px; font-size: 15px;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         Track Record (CRM)
+      </span>
+      <span style="color:var(--ink-faint); font-size: 20px; line-height: 1;">›</span>
+    </button>
+
+    <!-- TEMPS D'ÉCRAN + BRIEFING -->
+    <button class="modern-toggle" id="openScreenTimeBtn" style="margin-top: 10px; width: 100%; padding: 16px;">
+      <span style="display:flex; align-items:center; gap:10px; font-size: 15px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);"><rect x="5" y="2" width="14" height="20" rx="3"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+        <span>Temps d'écran <small id="stBtnToday" style="color:var(--ink-soft); font-weight:500; margin-left:4px;"></small></span>
+      </span>
+      <span style="color:var(--ink-faint); font-size: 20px; line-height: 1;">›</span>
+    </button>
+    <button class="modern-toggle" id="openBriefBtn" style="margin-top: 10px; width: 100%; padding: 16px;">
+      <span style="display:flex; align-items:center; gap:10px; font-size: 15px;">
+        <span style="font-size:18px; line-height:1;">☀️</span>
+        Revoir le briefing du jour
       </span>
       <span style="color:var(--ink-faint); font-size: 20px; line-height: 1;">›</span>
     </button>
@@ -1055,6 +1242,35 @@
   </div>
 </div>
 
+<!-- ===== SUPER-GLASS : BRIEFING DU MATIN ===== -->
+<div id="sgBrief" class="sg-overlay sg-page" aria-hidden="true">
+  <div class="sg-scroll">
+    <div class="sg-topbar"><span></span><button type="button" class="sg-x" id="sgBriefClose" aria-label="Fermer">✕</button></div>
+    <div id="sgBriefBody"></div>
+    <button type="button" class="sg-cta" id="sgBriefGo">Commencer la journée</button>
+  </div>
+</div>
+
+<!-- ===== SUPER-GLASS : MÉTÉO DÉTAILLÉE ===== -->
+<div id="sgWeather" class="sg-overlay sg-center" aria-hidden="true">
+  <div class="sg-card">
+    <button type="button" class="sg-x" id="sgWeatherClose" aria-label="Fermer">✕</button>
+    <div id="sgWeatherBody"></div>
+  </div>
+</div>
+
+<!-- ===== SUPER-GLASS : TEMPS D'ÉCRAN ===== -->
+<div id="sgScreenTime" class="sg-overlay sg-page" aria-hidden="true">
+  <div class="sg-scroll">
+    <div class="sg-topbar">
+      <button type="button" class="sg-back" id="sgStClose">‹ Retour</button>
+      <h2>Temps d'écran</h2>
+      <span style="width:72px;"></span>
+    </div>
+    <div id="sgStBody"></div>
+  </div>
+</div>
+
 <script>
 document.querySelectorAll('.collapsible-header').forEach(header => {
   header.addEventListener('click', () => {
@@ -1229,12 +1445,73 @@ const WMO_WEATHER_ICONS = {
   95: '⛈', 96: '⛈', 99: '⛈️'
 };
 
+const WMO_LABELS = {
+  0:'Ciel dégagé', 1:'Plutôt dégagé', 2:'Partiellement nuageux', 3:'Couvert',
+  45:'Brouillard', 48:'Brouillard givrant',
+  51:'Bruine légère', 53:'Bruine', 55:'Bruine dense', 56:'Bruine verglaçante', 57:'Bruine verglaçante',
+  61:'Pluie faible', 63:'Pluie modérée', 65:'Pluie forte', 66:'Pluie verglaçante', 67:'Pluie verglaçante',
+  71:'Neige faible', 73:'Neige modérée', 75:'Neige forte', 77:'Grains de neige',
+  80:'Averses faibles', 81:'Averses', 82:'Averses violentes', 85:'Averses de neige', 86:'Averses de neige',
+  95:'Orage', 96:'Orage avec grêle', 99:'Orage violent avec grêle'
+};
+function weatherIconFor(code){
+  if (WMO_WEATHER_ICONS[code]) return WMO_WEATHER_ICONS[code];
+  if (code === 56 || code === 57 || code === 66 || code === 67) return '🌧️';
+  return '☁️';
+}
+function weatherLabelFor(code){ return WMO_LABELS[code] || 'Météo'; }
+function windDirLabel(deg){
+  const d = ['Nord','Nord-Est','Est','Sud-Est','Sud','Sud-Ouest','Ouest','Nord-Ouest'];
+  return d[Math.round((deg || 0) / 45) % 8];
+}
+function uvLabel(uv){
+  if (uv < 3) return 'Faible';
+  if (uv < 6) return 'Modéré';
+  if (uv < 8) return 'Élevé';
+  if (uv < 11) return 'Très élevé';
+  return 'Extrême';
+}
+
+let weatherState = null;
+try { weatherState = JSON.parse(localStorage.getItem('weather_cache') || 'null'); } catch(e) { weatherState = null; }
+
 async function fetchWeatherForLocation(lat, lon) {
   try {
-    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`);
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+      + `&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m`
+      + `&hourly=temperature_2m,precipitation_probability,weather_code`
+      + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max`
+      + `&wind_speed_unit=kmh&timezone=auto&forecast_days=2`;
+    const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
-    return { temp: Math.round(data.current.temperature_2m), code: data.current.weather_code };
+    const c = data.current, d = data.daily, h = data.hourly;
+    let start = h.time.findIndex(t => t >= c.time.slice(0, 13) + ':00');
+    if (start < 0) start = 0;
+    const hours = h.time.slice(start, start + 12).map((t, i) => ({
+      time: t,
+      temp: Math.round(h.temperature_2m[start + i]),
+      pop: h.precipitation_probability[start + i],
+      code: h.weather_code[start + i]
+    }));
+    return {
+      temp: Math.round(c.temperature_2m),
+      code: c.weather_code,
+      feels: Math.round(c.apparent_temperature),
+      humidity: Math.round(c.relative_humidity_2m),
+      precip: c.precipitation,
+      wind: Math.round(c.wind_speed_10m),
+      windDir: c.wind_direction_10m,
+      gust: Math.round(c.wind_gusts_10m),
+      min: Math.round(d.temperature_2m_min[0]),
+      max: Math.round(d.temperature_2m_max[0]),
+      popMax: d.precipitation_probability_max[0],
+      popNow: hours.length ? hours[0].pop : null,
+      uv: d.uv_index_max[0],
+      sunrise: d.sunrise[0],
+      sunset: d.sunset[0],
+      hours
+    };
   } catch(e) { return null; }
 }
 
@@ -1247,21 +1524,120 @@ async function fetchCityName(lat, lon) {
   } catch(e) { return ''; }
 }
 
-async function updateWeatherWidget() {
-  if (!('geolocation' in navigator)) return;
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const weather = await fetchWeatherForLocation(pos.coords.latitude, pos.coords.longitude);
-    if (!weather) return;
-    const city = await fetchCityName(pos.coords.latitude, pos.coords.longitude);
-    weatherTemp.textContent = `${weather.temp}°`;
-    weatherIcon.textContent = WMO_WEATHER_ICONS[weather.code] || '☀️';
-    if (city) { weatherCity.textContent = city; weatherCity.style.display = 'inline'; } 
-    else { weatherCity.style.display = 'none'; }
-    weatherPill.style.display = 'flex';
-  }, (err) => { console.warn("Géoloc météo refusée :", err.message); }, { timeout: 10000 });
+function paintWeatherPill() {
+  if (!weatherState) return;
+  weatherTemp.textContent = `${weatherState.temp}°`;
+  weatherIcon.textContent = weatherIconFor(weatherState.code);
+  if (weatherState.city) { weatherCity.textContent = weatherState.city; weatherCity.style.display = 'inline'; }
+  else { weatherCity.style.display = 'none'; }
+  weatherPill.style.display = 'flex';
 }
 
-if (weatherPill) weatherPill.addEventListener('click', updateWeatherWidget);
+function getPosition() {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, maximumAge: 300000 });
+  });
+}
+
+async function updateWeatherWidget() {
+  if (!('geolocation' in navigator)) return false;
+  try {
+    const pos = await getPosition();
+    const w = await fetchWeatherForLocation(pos.coords.latitude, pos.coords.longitude);
+    if (!w) return false;
+    const city = await fetchCityName(pos.coords.latitude, pos.coords.longitude);
+    weatherState = Object.assign({}, w, { city, updatedAt: Date.now() });
+    try { localStorage.setItem('weather_cache', JSON.stringify(weatherState)); } catch(e) {}
+    paintWeatherPill();
+    renderWeatherDetail();
+    renderBriefWeather();
+    return true;
+  } catch(err) {
+    console.warn("Géoloc météo refusée :", err && err.message);
+    return false;
+  }
+}
+
+/* ----- Overlays glass : helpers ----- */
+function sgOpen(el)  { el.classList.add('open');    el.setAttribute('aria-hidden', 'false'); }
+function sgClose(el) { el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }
+
+/* ----- Météo détaillée ----- */
+const sgWeather = document.getElementById('sgWeather');
+const sgWeatherBody = document.getElementById('sgWeatherBody');
+
+function renderWeatherDetail() {
+  if (!sgWeatherBody) return;
+  const w = weatherState;
+  if (!w) {
+    sgWeatherBody.innerHTML = `<div class="sg-empty" style="padding:28px 8px;">Météo indisponible.<br>Autorise la localisation puis réessaie.</div>
+      <button type="button" class="sg-refresh" data-act="refresh">↻ Réessayer</button>`;
+    return;
+  }
+  const hoursHtml = (w.hours || []).map((h, i) => `
+    <div class="sg-hour">
+      <div class="h">${i === 0 ? 'Maint.' : h.time.slice(11, 13) + 'h'}</div>
+      <div class="i">${weatherIconFor(h.code)}</div>
+      <div class="tp">${h.temp}°</div>
+      <div class="p">💧${h.pop ?? 0}%</div>
+    </div>`).join('');
+  const pop = w.popMax ?? 0;
+  const upd = w.updatedAt ? new Date(w.updatedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+  sgWeatherBody.innerHTML = `
+    <div class="sg-wxd-head">
+      ${w.city ? `<div class="sg-wxd-city">📍 ${escapeHtml(w.city)}</div>` : ''}
+      <div class="sg-wxd-ico">${weatherIconFor(w.code)}</div>
+      <div class="sg-wxd-temp">${w.temp}°</div>
+      <div class="sg-wxd-label">${weatherLabelFor(w.code)}</div>
+      <div class="sg-wxd-minmax">Min ${w.min}° · Max ${w.max}°</div>
+    </div>
+    <div class="sg-tiles">
+      <div class="sg-tile">
+        <div class="k">💨 Vent</div>
+        <div class="v">${w.wind} <small>km/h</small></div>
+        <div class="d">${windDirLabel(w.windDir)}<br>Rafales ${w.gust} km/h</div>
+      </div>
+      <div class="sg-tile">
+        <div class="k">🌧 Pluie</div>
+        <div class="v">${pop}<small>%</small></div>
+        <div class="sg-bar"><i style="width:${pop}%"></i></div>
+        <div class="d">Prochaine heure : ${w.popNow ?? 0}%${w.precip > 0 ? ` · ${w.precip} mm` : ''}</div>
+      </div>
+      <div class="sg-tile">
+        <div class="k">🌡 Ressenti</div>
+        <div class="v">${w.feels}°</div>
+        <div class="d">Humidité ${w.humidity}%</div>
+      </div>
+      <div class="sg-tile">
+        <div class="k">☀️ UV</div>
+        <div class="v">${Math.round(w.uv)}</div>
+        <div class="d">${uvLabel(w.uv)}<br>🌅 ${w.sunrise.slice(11, 16)} · 🌇 ${w.sunset.slice(11, 16)}</div>
+      </div>
+    </div>
+    <div class="sg-eyebrow">Prochaines heures</div>
+    <div class="sg-hours">${hoursHtml}</div>
+    <button type="button" class="sg-refresh" data-act="refresh">↻ Actualiser</button>
+    ${upd ? `<div class="sg-updated">Mis à jour à ${upd}</div>` : ''}`;
+}
+
+function openWeatherDetail() {
+  renderWeatherDetail();
+  sgOpen(sgWeather);
+  if (!weatherState || !weatherState.updatedAt || Date.now() - weatherState.updatedAt > 10 * 60 * 1000) updateWeatherWidget();
+}
+if (weatherPill) weatherPill.addEventListener('click', openWeatherDetail);
+document.getElementById('sgWeatherClose').addEventListener('click', () => sgClose(sgWeather));
+sgWeather.addEventListener('click', (e) => { if (e.target === sgWeather) sgClose(sgWeather); });
+sgWeatherBody.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act="refresh"]');
+  if (!btn) return;
+  btn.textContent = '↻ Actualisation…';
+  btn.disabled = true;
+  await updateWeatherWidget();
+  renderWeatherDetail();
+});
+paintWeatherPill();
+
 
 function renderTagFilterBar() {
   const colorKeys = ['all', 'default', 'red', 'blue', 'green', 'yellow', 'purple'];
@@ -1313,24 +1689,81 @@ if(quickMicFab) {
   });
 }
 
-// LOGIQUE MÉMO VOCAL CRM
+// LOGIQUE MÉMO VOCAL CRM (dictée continue, aperçu en direct, commandes vocales)
 const crmMicBtn = document.getElementById('crmMicBtn');
 const crmNotes = document.getElementById('crm-notes');
-if(crmMicBtn && SpeechRecognition) {
-  let crmRec = new SpeechRecognition();
-  crmRec.lang = 'fr-FR';
-  crmRec.onresult = (e) => {
-     const transcript = e.results[0][0].transcript;
-     crmNotes.value = (crmNotes.value + ' ' + transcript).trim();
-     crmMicBtn.style.filter = 'grayscale(100%)';
-  };
-  crmRec.onerror = () => { crmMicBtn.style.filter = 'grayscale(100%)'; };
-  crmRec.onend = () => { crmMicBtn.style.filter = 'grayscale(100%)'; };
-  
+if (crmMicBtn && SpeechRecognition) {
+  let rec = null, listening = false, base = '', lastStart = 0, quickFails = 0;
+  const hint = document.createElement('div');
+  hint.className = 'crm-mic-hint';
+  hint.style.display = 'none';
+  hint.textContent = "🔴 Je t'écoute… touche le micro pour arrêter";
+  crmMicBtn.parentElement.appendChild(hint);
+
+  function formatDictation(t) {
+    return t
+      .replace(/\s*\b(nouvelle ligne|à la ligne)\b\s*/gi, '\n')
+      .replace(/\s*\bpoint d['’]interrogation\b/gi, ' ?')
+      .replace(/\s*\bpoint final\b/gi, '.')
+      .replace(/\s*\bvirgule\b/gi, ',')
+      .replace(/([.!?]\s+|\n)([a-zà-ÿ])/g, (m, a, b) => a + b.toUpperCase());
+  }
+  function compose(raw) {
+    let d = formatDictation(raw);
+    if ((!base || /[.!?]\s*$|\n$/.test(base)) && d) d = d.charAt(0).toUpperCase() + d.slice(1);
+    const sep = (base && d && !/\n$/.test(base) && !/^[,.?!]/.test(d)) ? ' ' : '';
+    return base + sep + d;
+  }
+  function setUI(on) {
+    crmMicBtn.classList.toggle('recording', on);
+    crmMicBtn.style.filter = on ? 'none' : 'grayscale(100%)';
+    hint.style.display = on ? 'block' : 'none';
+  }
+  function startRec() {
+    rec = new SpeechRecognition();
+    rec.lang = 'fr-FR';
+    rec.continuous = true;
+    rec.interimResults = true;
+    lastStart = Date.now();
+    rec.onresult = (e) => {
+      let txt = '';
+      for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript + ' ';
+      crmNotes.value = compose(txt.trim());
+      crmNotes.scrollTop = crmNotes.scrollHeight;
+    };
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        stopRec();
+        alert("Autorise l'accès au micro (et à la reconnaissance vocale) pour dicter tes notes.");
+      }
+    };
+    rec.onend = () => {
+      if (!listening) return;
+      // la reco s'arrête seule après un silence : on relance, sauf si ça boucle
+      quickFails = (Date.now() - lastStart < 700) ? quickFails + 1 : 0;
+      if (quickFails >= 3) { stopRec(); return; }
+      base = crmNotes.value.replace(/[ \t]+$/, '');
+      try { startRec(); } catch(_) { stopRec(); }
+    };
+    rec.start();
+  }
+  function stopRec() {
+    listening = false;
+    setUI(false);
+    if (rec) { try { rec.stop(); } catch(_) {} }
+  }
   crmMicBtn.addEventListener('click', () => {
-     crmMicBtn.style.filter = 'none';
-     crmRec.start();
+    if (listening) { stopRec(); return; }
+    listening = true; quickFails = 0;
+    base = crmNotes.value.replace(/[ \t]+$/, '');
+    setUI(true);
+    try { startRec(); } catch(_) { stopRec(); }
   });
+  window.__stopCrmMic = stopRec;
+  document.getElementById('crm-form').addEventListener('submit', stopRec, true);
+  const closeBtn = document.getElementById('closeCrmBtn');
+  if (closeBtn) closeBtn.addEventListener('click', stopRec);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') stopRec(); });
 } else if (crmMicBtn) {
   crmMicBtn.style.display = 'none';
 }
@@ -1665,7 +2098,7 @@ function switchTab(tab){
     renderUpcoming();
     renderDone();
   }
-  if(tab === 'stats') renderStats();
+  if(tab === 'stats'){ renderStats(); if(typeof updateStButton==='function') updateStButton(); }
   if(tab === 'today') setTimeout(scrollToNow, 50);
 }
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -3274,12 +3707,264 @@ if(crmForm) {
   });
 }
 
+
+/* =====================================================
+   MORNING BRIEFING (super-glass, 1er lancement du jour)
+   ===================================================== */
+const MB_KEY = 'morning_brief_date';
+const sgBrief = document.getElementById('sgBrief');
+const sgBriefBody = document.getElementById('sgBriefBody');
+
+function dayKey(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function renderBriefWeather() {
+  const el = document.getElementById('sgBriefWeather');
+  if (!el) return;
+  const w = weatherState;
+  if (!w) { el.innerHTML = `<div class="sg-empty" style="padding:2px 0;">Météo indisponible (localisation non autorisée)</div>`; return; }
+  el.innerHTML = `
+    <div class="sg-wx-ico">${weatherIconFor(w.code)}</div>
+    <div class="sg-wx-main">
+      <div class="sg-wx-temp">${w.temp}° <span style="font-size:14px; font-family:'Inter',sans-serif; color:var(--ink-soft); font-weight:500;">${weatherLabelFor(w.code)}</span></div>
+      <div class="sg-wx-sub">${w.min}° / ${w.max}° · 💧 ${w.popMax ?? 0}% · 💨 ${w.wind} km/h${w.city ? ' · ' + escapeHtml(w.city) : ''}</div>
+    </div>
+    <div class="sg-chev">›</div>`;
+}
+
+function renderMorningBrief() {
+  const now = new Date();
+  const sod = startOfDay(now);
+  const eod = new Date(sod.getTime() + 86400000);
+  const weekAgo = new Date(sod.getTime() - 7 * 86400000);
+
+  const todays = tasks
+    .filter(t => t.due && new Date(t.due) >= sod && new Date(t.due) < eod)
+    .sort((a, b) => new Date(a.due) - new Date(b.due));
+  const todo = todays.filter(t => !t.done);
+  const doneCount = todays.length - todo.length;
+  // les événements Google importés ne sont pas des "tâches en retard"
+  const overdue = tasks.filter(t => !t.gcalEventId && t.due && !t.done && new Date(t.due) < sod && new Date(t.due) >= weekAgo).length;
+
+  const crmOpen = (c) => c.date && c.status !== 'conclu' && c.status !== 'refuse';
+  const crmToday = crmData.filter(c => crmOpen(c) && new Date(c.date) >= sod && new Date(c.date) < eod)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const crmLate = crmData.filter(c => crmOpen(c) && new Date(c.date) < sod).length;
+
+  const h = now.getHours();
+  const greet = h < 5 ? 'Bonsoir' : h < 18 ? 'Bonjour' : 'Bonsoir';
+  let first = '';
+  try {
+    const n = (gName && gName.textContent || '').trim();
+    if (n && n !== 'Non connecté') first = ' ' + n.split(' ')[0];
+  } catch(e) {}
+
+  const agenda = todo.slice(0, 5).map(t => `
+    <div class="sg-item">
+      <span class="t">${fmtTime(t.due)}</span>
+      <span class="x">${escapeHtml(t.text)}</span>
+    </div>`).join('');
+  const more = todo.length > 5 ? `<div class="sg-empty" style="padding:6px 0 0;">+ ${todo.length - 5} autre${todo.length - 5 > 1 ? 's' : ''}</div>` : '';
+
+  const crmHtml = crmToday.slice(0, 3).map(c => `
+    <div class="sg-item">
+      <span class="t">${fmtTime(c.date)}</span>
+      <span class="x">${escapeHtml(c.name)}${c.company ? ` <span class="s">· ${escapeHtml(c.company)}</span>` : ''}</span>
+      <span class="s">${(CRM_STATUSES[c.status] || CRM_STATUSES.attente).label}</span>
+    </div>`).join('');
+
+  sgBriefBody.innerHTML = `
+    <div class="sg-rise" style="--i:0; padding: 4px 4px 10px;">
+      <div class="sg-eyebrow">Briefing du jour</div>
+      <div class="sg-hello">${greet}${escapeHtml(first)} 👋</div>
+      <div class="sg-date">${now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+    </div>
+    <div class="sg-panel sg-rise" style="--i:1;">
+      <div class="sg-wx-row" id="sgBriefWeather"></div>
+    </div>
+    <div class="sg-chips sg-rise" style="--i:2;">
+      <div class="sg-chip"><b>${todo.length}</b><span>À faire</span></div>
+      <div class="sg-chip"><b>${doneCount}</b><span>Faites</span></div>
+      <div class="sg-chip"><b style="${overdue ? 'color:var(--rust);' : ''}">${overdue}</b><span>En retard</span></div>
+    </div>
+    <div class="sg-panel sg-rise" style="--i:3;">
+      <div class="sg-eyebrow">Au programme</div>
+      ${todo.length ? `<div class="sg-list">${agenda}</div>${more}` : `<div class="sg-empty">Rien de prévu aujourd'hui ✨<br>Journée libre.</div>`}
+    </div>
+    ${(crmToday.length || crmLate) ? `
+    <div class="sg-panel sg-rise" style="--i:4;">
+      <div class="sg-eyebrow">Suivi CRM</div>
+      ${crmHtml ? `<div class="sg-list">${crmHtml}</div>` : ''}
+      ${crmLate ? `<div class="sg-empty" style="padding:${crmHtml ? '8px 0 0' : '0'}; color:var(--rust);">${crmLate} relance${crmLate > 1 ? 's' : ''} en retard</div>` : ''}
+    </div>` : ''}`;
+
+  renderBriefWeather();
+  const wxRow = document.getElementById('sgBriefWeather');
+  if (wxRow) wxRow.addEventListener('click', () => { if (weatherState) openWeatherDetail(); });
+}
+
+function openMorningBrief() {
+  renderMorningBrief();
+  sgOpen(sgBrief);
+  if (!weatherState || !weatherState.updatedAt || Date.now() - weatherState.updatedAt > 30 * 60 * 1000) updateWeatherWidget();
+}
+function closeMorningBrief() { sgClose(sgBrief); }
+
+function maybeShowMorningBrief() {
+  const today = dayKey();
+  if (localStorage.getItem(MB_KEY) === today) return;
+  try { localStorage.setItem(MB_KEY, today); } catch(e) {}
+  // on attend la fin du splash
+  setTimeout(openMorningBrief, 1300);
+}
+
+document.getElementById('sgBriefClose').addEventListener('click', closeMorningBrief);
+document.getElementById('sgBriefGo').addEventListener('click', closeMorningBrief);
+document.getElementById('openBriefBtn').addEventListener('click', openMorningBrief);
+
+/* =====================================================
+   TEMPS D'ÉCRAN (temps passé dans l'app, par jour)
+   ===================================================== */
+const ST_KEY = 'journee_screentime_v1';
+const sgScreenTime = document.getElementById('sgScreenTime');
+const sgStBody = document.getElementById('sgStBody');
+let stData = {};
+try { stData = JSON.parse(localStorage.getItem(ST_KEY) || '{}') || {}; } catch(e) { stData = {}; }
+let stDirty = 0;
+let stLast = Date.now();
+
+function stEntry(k) {
+  k = k || dayKey();
+  if (!stData[k]) stData[k] = { sec: 0, opens: 0, tabs: {} };
+  return stData[k];
+}
+function stSave() {
+  const keys = Object.keys(stData).sort();
+  while (keys.length > 60) delete stData[keys.shift()];
+  try { localStorage.setItem(ST_KEY, JSON.stringify(stData)); } catch(e) {}
+  updateStButton();
+}
+function stSection() {
+  if (typeof crmPage !== 'undefined' && crmPage.classList.contains('open')) return 'crm';
+  return activeTab || 'today';
+}
+function fmtDur(sec) {
+  sec = Math.round(sec);
+  if (sec < 60) return sec + ' s';
+  const m = Math.round(sec / 60);
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m / 60), r = m % 60;
+  return h + ' h' + (r ? ' ' + String(r).padStart(2, '0') : '');
+}
+function updateStButton() {
+  const el = document.getElementById('stBtnToday');
+  if (el) el.textContent = '· ' + fmtDur(stEntry().sec) + " aujourd'hui";
+}
+
+const ST_NAMES = { today: 'Agenda', tasks: 'Tâches', stats: 'Bilan', account: 'Compte', crm: 'CRM' };
+
+function renderScreenTime() {
+  const today = stEntry();
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const e = stData[dayKey(d)];
+    days.push({ d, sec: e ? e.sec : 0, isToday: i === 0 });
+  }
+  const yest = days[5].sec;
+  const max = Math.max(60, ...days.map(x => x.sec));
+  const avg = days.reduce((a, x) => a + x.sec, 0) / 7;
+  const best = days.reduce((a, x) => x.sec > a.sec ? x : a, days[0]);
+
+  let delta = '';
+  if (yest > 0 || today.sec > 0) {
+    const diff = today.sec - yest;
+    if (Math.abs(diff) < 30) delta = `<div class="sg-st-delta">Autant qu'hier</div>`;
+    else if (diff > 0) delta = `<div class="sg-st-delta up">▲ ${fmtDur(diff)} de plus qu'hier</div>`;
+    else delta = `<div class="sg-st-delta down">▼ ${fmtDur(-diff)} de moins qu'hier</div>`;
+  }
+
+  const bars = days.map(x => `
+    <div class="sg-bcol ${x.isToday ? 'today' : ''}">
+      <div class="val">${x.sec ? fmtDur(x.sec) : ''}</div>
+      <div class="bar" style="height:${Math.max(3, Math.round(x.sec / max * 100))}px"></div>
+      <div class="lbl">${x.d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '')}</div>
+    </div>`).join('');
+
+  const tabEntries = Object.entries(today.tabs || {}).sort((a, b) => b[1] - a[1]);
+  const tabMax = tabEntries.length ? tabEntries[0][1] : 1;
+  const secHtml = tabEntries.length ? tabEntries.map(([k, v]) => `
+    <div class="sg-sec-row">
+      <span class="n">${ST_NAMES[k] || k}</span>
+      <span class="bar"><i style="width:${Math.max(4, Math.round(v / tabMax * 100))}%"></i></span>
+      <span class="d">${fmtDur(v)}</span>
+    </div>`).join('') : `<div class="sg-empty">Pas encore de données aujourd'hui.</div>`;
+
+  sgStBody.innerHTML = `
+    <div class="sg-panel sg-rise" style="--i:0;">
+      <div class="sg-eyebrow">Aujourd'hui</div>
+      <div class="sg-st-big">${fmtDur(today.sec)}</div>
+      ${delta}
+    </div>
+    <div class="sg-panel sg-rise" style="--i:1;">
+      <div class="sg-eyebrow">7 derniers jours</div>
+      <div class="sg-bars">${bars}</div>
+    </div>
+    <div class="sg-chips sg-rise" style="--i:2;">
+      <div class="sg-chip"><b>${fmtDur(avg)}</b><span>Moy. / jour</span></div>
+      <div class="sg-chip"><b>${today.opens}</b><span>Ouvertures</span></div>
+      <div class="sg-chip"><b>${best.sec ? best.d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '') : '–'}</b><span>Jour max</span></div>
+    </div>
+    <div class="sg-panel sg-rise" style="--i:3;">
+      <div class="sg-eyebrow">Répartition aujourd'hui</div>
+      ${secHtml}
+    </div>
+    <div class="sg-note sg-rise" style="--i:4;">Temps passé dans l'app Journée uniquement. Le temps d'écran du système n'est pas accessible aux apps web.</div>`;
+}
+
+function openScreenTime() { stSave(); renderScreenTime(); sgOpen(sgScreenTime); }
+document.getElementById('openScreenTimeBtn').addEventListener('click', openScreenTime);
+document.getElementById('sgStClose').addEventListener('click', () => sgClose(sgScreenTime));
+
+function initScreenTime() {
+  if (document.visibilityState === 'visible') stEntry().opens++;
+  stSave();
+  setInterval(() => {
+    const now = Date.now();
+    const dt = Math.min((now - stLast) / 1000, 3);
+    stLast = now;
+    if (document.visibilityState !== 'visible') return;
+    const e = stEntry();
+    e.sec += dt;
+    const s = stSection();
+    e.tabs[s] = (e.tabs[s] || 0) + dt;
+    stDirty++;
+    if (stDirty >= 5) { stSave(); stDirty = 0; }
+    if (sgScreenTime.classList.contains('open') && stDirty === 0) renderScreenTime();
+  }, 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { stSave(); }
+    else { stLast = Date.now(); stEntry().opens++; stSave(); }
+  });
+  window.addEventListener('pagehide', stSave);
+}
+
+/* Échap ferme les panneaux glass */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  [sgWeather, sgScreenTime, sgBrief].forEach(el => { if (el.classList.contains('open')) sgClose(el); });
+});
+
 loadCRM();
 loadTasks();
 updateTodayHeader();
 initGoogleAuth();
 setupNotifPrompt();
+initScreenTime();
 updateWeatherWidget();
+maybeShowMorningBrief();
 setInterval(()=>{ renderAll(); }, 60000);
 setInterval(()=>{ updateWeatherWidget(); }, 1800000);
 quickFab.classList.add('show');
