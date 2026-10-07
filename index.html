@@ -802,6 +802,66 @@
   .sg-item{ padding: 11px 2px; }
   .sg-sec-row{ margin: 12px 0; }
   .sg-note{ padding: 6px 10px; }
+
+  /* =====================================================
+     TRANSITIONS FLUIDES (grandit depuis le point touché)
+     ===================================================== */
+  .sg-grow{ transition: none !important; will-change: transform, opacity; }
+  .qa-backdrop.open{ animation: sgFadeIn .32s ease both; }
+  @keyframes sgFadeIn{ from{ opacity: 0; } to{ opacity: 1; } }
+
+  /* =====================================================
+     CARTES CRM : profondeur au défilement + relief au toucher
+     ===================================================== */
+  :root{ --sg-hl: rgba(255,255,255,.38); }
+  [data-theme="dark"], [data-theme="glass-dark"]{ --sg-hl: rgba(255,255,255,.12); }
+  .crm-card{
+    --rx: 0deg; --ry: 0deg; --press: 1; --lift: 0; --dl: 0; --mx: 50%; --my: 50%; --dop: 1;
+    transform: perspective(720px) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--press));
+    transition: transform .38s cubic-bezier(.2,.8,.2,1), box-shadow .38s ease;
+    box-shadow:
+      0 calc(2px + (var(--lift) + var(--dl)) * 12px) calc(8px + (var(--lift) + var(--dl)) * 26px)
+      rgba(0,0,0, calc(.04 + (var(--lift) + var(--dl)) * .12));
+    opacity: var(--dop);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: pan-y;
+  }
+  .crm-card.touching{ transition: transform .08s linear, box-shadow .2s ease; }
+  .crm-card::after{
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(circle at var(--mx) var(--my), var(--sg-hl), transparent 58%);
+    opacity: var(--lift); transition: opacity .3s ease;
+  }
+
+  /* =====================================================
+     MODE NUIT AUTOMATIQUE
+     ===================================================== */
+  #nightVeil{
+    position: fixed; inset: 0; z-index: 5000; pointer-events: none; opacity: 0;
+    transition: opacity 3s ease;
+  }
+  #nightVeil.dusk{ background: linear-gradient(180deg, #3b2f86 0%, #b5527f 55%, #ff9f5a 100%); mix-blend-mode: multiply; }
+  #nightVeil.dawn{ background: linear-gradient(180deg, #ffd9a8 0%, #ffeccf 60%, #fff6e6 100%); }
+  html.theme-fading, html.theme-fading *{
+    transition: background-color 1.4s ease, color 1.4s ease, border-color 1.4s ease, fill 1.4s ease, stroke 1.4s ease, box-shadow 1.4s ease !important;
+  }
+  #nightTimesRow{
+    display: none; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    margin: -6px 0 6px; padding: 12px 16px; border-radius: 14px; background: var(--card-soft);
+    border: 1px solid var(--line); font-size: 14px; color: var(--ink);
+  }
+  #nightTimesRow.show{ display: flex; }
+  #nightTimesRow .nt-inputs{ display: flex; align-items: center; gap: 8px; }
+  #nightTimesRow input[type="time"]{
+    width: auto; margin: 0; padding: 7px 9px; font-size: 14px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink); font-family: 'Inter', sans-serif;
+  }
+  #nightTimesRow .nt-note{ flex-basis: 100%; font-size: 11px; color: var(--ink-soft); line-height: 1.4; }
+
+  @media (prefers-reduced-motion: reduce){
+    .crm-card, .crm-card.touching{ transition: none; transform: none; }
+    .sg-page::before, .sg-page::after{ animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -1021,6 +1081,20 @@
       <option value="glass-dark">Liquid Glass Sombre (Bleu/Noir)</option>
     </select>
   </label>
+
+  <label class="modern-toggle sage" style="margin-top:20px;">
+    <span style="display:flex; flex-direction:column;">
+      <span>Mode nuit automatique</span>
+      <span style="font-size:11px; color:var(--ink-soft); font-weight:400; margin-top:2px;">Bascule en sombre avec un dégradé doux</span>
+    </span>
+    <input type="checkbox" id="nightAutoCheckbox">
+    <div class="switch-track"><div class="switch-thumb"></div></div>
+  </label>
+  <div id="nightTimesRow">
+    <span>Nuit de</span>
+    <span class="nt-inputs"><input type="time" id="nightStart" value="21:00"> <span>à</span> <input type="time" id="nightEnd" value="07:00"></span>
+    <span class="nt-note">Un voile crépusculaire s'installe 30 min avant l'heure de début, et une lueur d'aube suit l'heure de fin. Remplace le thème choisi pendant la nuit.</span>
+  </div>
 
   <label class="modern-toggle sage" style="margin-top:20px;">
     <span style="display:flex; flex-direction:column;">
@@ -1271,6 +1345,9 @@
   </div>
 </div>
 
+<!-- ===== MODE NUIT : VOILE ===== -->
+<div id="nightVeil" aria-hidden="true"></div>
+
 <!-- ===== SUPER-GLASS : TEMPS D'ÉCRAN ===== -->
 <div id="sgScreenTime" class="sg-overlay sg-page" aria-hidden="true">
   <div class="sg-scroll">
@@ -1296,14 +1373,44 @@ const themeSelect = document.getElementById('themeSelect');
 let currentTheme = localStorage.getItem('theme_pref') || 'auto';
 if(themeSelect) themeSelect.value = currentTheme;
 
+// --- Mode nuit automatique : noyau (doit exister avant le 1er applyTheme) ---
+let nightAuto = localStorage.getItem('night_auto') === '1';
+let nightOn = false;
+function nightTimeToMin(v, def) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(v || '');
+  return m ? (parseInt(m[1], 10) * 60 + parseInt(m[2], 10)) : def;
+}
+function nightPhase(now) {
+  now = now || new Date();
+  const start = nightTimeToMin(localStorage.getItem('night_start'), 21 * 60);
+  const end = nightTimeToMin(localStorage.getItem('night_end'), 7 * 60);
+  const nowM = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  if (start === end) return { night: false, veil: 0, kind: 'dusk' };
+  const night = start > end ? (nowM >= start || nowM < end) : (nowM >= start && nowM < end);
+  if (night) return { night: true, veil: 0, kind: 'dusk' };
+  const untilStart = (start - nowM + 1440) % 1440;
+  if (untilStart <= 30) return { night: false, veil: (1 - untilStart / 30) * 0.35, kind: 'dusk' };
+  const sinceEnd = (nowM - end + 1440) % 1440;
+  if (sinceEnd < 30) return { night: false, veil: (1 - sinceEnd / 30) * 0.25, kind: 'dawn' };
+  return { night: false, veil: 0, kind: 'dusk' };
+}
+nightOn = nightAuto && nightPhase().night;
+
 function applyTheme(theme) {
+  if (nightAuto && nightOn) {
+    theme = (theme === 'glass-light' || theme === 'glass-dark' || theme === 'glass') ? 'glass-dark' : 'dark';
+  }
   document.documentElement.removeAttribute('data-theme');
   if (theme === 'glass-light' || theme === 'glass-dark' || theme === 'dark') {
     document.documentElement.setAttribute('data-theme', theme);
   } else if (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
     document.documentElement.setAttribute('data-theme', 'dark');
   }
+  const t = document.documentElement.getAttribute('data-theme');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', t === 'dark' ? '#121212' : t === 'glass-dark' ? '#000000' : t === 'glass-light' ? '#dbeafe' : '#ECE3D0');
 }
+
 applyTheme(currentTheme);
 
 if(themeSelect) {
@@ -3969,12 +4076,225 @@ document.addEventListener('keydown', (e) => {
   [sgWeather, sgScreenTime, sgBrief].forEach(el => { if (el.classList.contains('open')) sgClose(el); });
 });
 
+
+/* =====================================================
+   MODE NUIT AUTO : voile, bascule douce, réglages
+   ===================================================== */
+let nightFlipping = false;
+function setVeil(opacity, kind, seconds) {
+  const v = document.getElementById('nightVeil');
+  if (!v) return;
+  if (kind) { v.classList.toggle('dusk', kind === 'dusk'); v.classList.toggle('dawn', kind === 'dawn'); }
+  if (seconds !== undefined) v.style.transitionDuration = seconds + 's';
+  v.style.opacity = String(opacity);
+}
+function refreshNightMode(initial) {
+  if (!nightAuto) {
+    if (nightOn) { nightOn = false; applyTheme(currentTheme); }
+    setVeil(0);
+    return;
+  }
+  if (nightFlipping) return;
+  const ph = nightPhase();
+  if (ph.night === nightOn) { setVeil(ph.veil, ph.kind, 20); return; }
+  if (initial) {
+    nightOn = ph.night; applyTheme(currentTheme); setVeil(ph.veil, ph.kind, 0);
+    return;
+  }
+  // bascule en douceur : le voile monte, on change de thème dessous, puis il se dissipe
+  nightFlipping = true;
+  setVeil(0.55, ph.night ? 'dusk' : 'dawn', 0.7);
+  setTimeout(() => {
+    nightOn = ph.night;
+    document.documentElement.classList.add('theme-fading');
+    applyTheme(currentTheme);
+    const after = nightPhase();
+    setVeil(after.night ? 0 : after.veil, after.kind, 2.5);
+    setTimeout(() => { document.documentElement.classList.remove('theme-fading'); nightFlipping = false; }, 1700);
+  }, 750);
+}
+function initNightMode() {
+  const cb = document.getElementById('nightAutoCheckbox');
+  const row = document.getElementById('nightTimesRow');
+  const st = document.getElementById('nightStart');
+  const en = document.getElementById('nightEnd');
+  if (cb) {
+    cb.checked = nightAuto;
+    if (row) row.classList.toggle('show', nightAuto);
+    cb.addEventListener('change', () => {
+      nightAuto = cb.checked;
+      try { localStorage.setItem('night_auto', nightAuto ? '1' : '0'); } catch(e) {}
+      if (row) row.classList.toggle('show', nightAuto);
+      refreshNightMode(false);
+    });
+  }
+  if (st) st.value = localStorage.getItem('night_start') || '21:00';
+  if (en) en.value = localStorage.getItem('night_end') || '07:00';
+  [st, en].forEach(inp => { if (inp) inp.addEventListener('change', () => {
+    if (!inp.value) return;
+    try { localStorage.setItem(inp === st ? 'night_start' : 'night_end', inp.value); } catch(e) {}
+    refreshNightMode(false);
+  }); });
+  refreshNightMode(true);
+  setInterval(() => refreshNightMode(false), 20000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshNightMode(false); });
+}
+
+/* =====================================================
+   TRANSITIONS FLUIDES : les fiches grandissent depuis le point touché
+   ===================================================== */
+function initGrowTransitions() {
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) return;
+  let tap = null;
+  document.addEventListener('pointerdown', (e) => { tap = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
+
+  const EASE_OPEN = 'cubic-bezier(.2,.9,.25,1)';
+  const defs = [
+    ['detailSheet', 'sheet'], ['qaSheet', 'sheet'], ['settingsSheet', 'sheet'],
+    ['crmPage', 'page'], ['sgWeather', 'card', '.sg-card'],
+    ['sgScreenTime', 'scroll', '.sg-scroll'], ['sgBrief', 'scroll', '.sg-scroll']
+  ];
+
+  function stop(el) { if (el._sgAnim) { try { el._sgAnim.cancel(); } catch(_) {} el._sgAnim = null; } }
+  function cleanup(el) { el.classList.remove('sg-grow'); el.style.transformOrigin = ''; el._sgAnim = null; }
+
+  function growOpen(el, kind) {
+    if (!el.animate) return;
+    stop(el);
+    el.classList.add('sg-grow');
+    const r = el.getBoundingClientRect();
+    let ox, oy;
+    if (tap && Date.now() - tap.t < 2500) { ox = tap.x - r.left; oy = tap.y - r.top; }
+    else { ox = r.width / 2; oy = kind === 'sheet' ? r.height : r.height * 0.4; }
+    el._sgOrigin = { ox, oy };
+    el.style.transformOrigin = ox + 'px ' + oy + 'px';
+    // sur les conteneurs "scroll", pas d'opacité : elle casserait le flou des bulles de verre
+    const fade = kind !== 'scroll';
+    const frames = fade
+      ? [{ transform: 'scale(.18)', opacity: 0 }, { transform: 'scale(.62)', opacity: 1, offset: .3 }, { transform: 'scale(1)', opacity: 1 }]
+      : [{ transform: 'scale(.9)' }, { transform: 'scale(1)' }];
+    const a = el.animate(frames, { duration: fade ? 480 : 420, easing: EASE_OPEN });
+    el._sgAnim = a;
+    a.onfinish = () => cleanup(el);
+    a.oncancel = () => {};
+  }
+
+  function shrinkClose(el, kind) {
+    if (!el.animate) return;
+    stop(el);
+    el.classList.add('sg-grow');
+    const o = el._sgOrigin;
+    if (o) el.style.transformOrigin = o.ox + 'px ' + o.oy + 'px';
+    const fade = kind !== 'scroll';
+    const frames = fade
+      ? [{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(.2)', opacity: 0 }]
+      : [{ transform: 'scale(1)' }, { transform: 'scale(.94)' }];
+    const a = el.animate(frames, { duration: 280, easing: 'cubic-bezier(.4,0,.9,.4)', fill: fade ? 'forwards' : 'none' });
+    el._sgAnim = a;
+    a.onfinish = () => cleanup(el);
+  }
+
+  defs.forEach(([id, kind, sel]) => {
+    const host = document.getElementById(id);
+    if (!host) return;
+    const target = sel ? host.querySelector(sel) : host;
+    if (!target) return;
+    let wasOpen = host.classList.contains('open');
+    new MutationObserver(() => {
+      const isOpen = host.classList.contains('open');
+      if (isOpen === wasOpen) return;
+      wasOpen = isOpen;
+      if (isOpen) growOpen(target, kind); else shrinkClose(target, kind);
+    }).observe(host, { attributes: true, attributeFilter: ['class'] });
+  });
+}
+
+/* =====================================================
+   CARTES CRM : profondeur au défilement + relief au toucher
+   ===================================================== */
+function initCrmCards() {
+  const list = document.getElementById('crm-list');
+  const scroller = document.querySelector('.crm-content');
+  if (!list || !scroller) return;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) return;
+
+  // --- profondeur au défilement ---
+  let raf = 0;
+  function updateDepth() {
+    raf = 0;
+    const cards = list.querySelectorAll('.crm-card');
+    if (!cards.length) return;
+    const cr = scroller.getBoundingClientRect();
+    const cc = cr.top + cr.height / 2;
+    const half = Math.max(1, cr.height / 2);
+    const rects = Array.from(cards, c => c.getBoundingClientRect());
+    cards.forEach((c, i) => {
+      const r = rects[i];
+      const d = Math.abs((r.top + r.height / 2) - cc) / (half * 1.1);
+      const n = Math.min(1, d);
+      c.style.setProperty('--dl', (1 - n).toFixed(3));
+      c.style.setProperty('--dop', (1 - 0.38 * n * n).toFixed(3));
+      c.style.scale = (1 - 0.05 * n).toFixed(4);
+    });
+  }
+  function queueDepth() { if (!raf) raf = requestAnimationFrame(updateDepth); }
+  scroller.addEventListener('scroll', queueDepth, { passive: true });
+  window.addEventListener('resize', queueDepth);
+  new MutationObserver(queueDepth).observe(list, { childList: true });
+  if (crmPage) new MutationObserver(() => { if (crmPage.classList.contains('open')) setTimeout(queueDepth, 60); })
+    .observe(crmPage, { attributes: true, attributeFilter: ['class'] });
+  queueDepth();
+
+  // --- relief au toucher ---
+  let active = null, timer = 0;
+  function tilt(card, e) {
+    const r = card.getBoundingClientRect();
+    const px = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) - 0.5;
+    const py = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) - 0.5;
+    card.style.setProperty('--rx', (-py * 7).toFixed(2) + 'deg');
+    card.style.setProperty('--ry', (px * 9).toFixed(2) + 'deg');
+    card.style.setProperty('--mx', (px * 100 + 50).toFixed(1) + '%');
+    card.style.setProperty('--my', (py * 100 + 50).toFixed(1) + '%');
+  }
+  function release() {
+    clearTimeout(timer);
+    if (!active) return;
+    const c = active; active = null;
+    c.classList.remove('touching');
+    ['--rx', '--ry'].forEach(p => c.style.setProperty(p, '0deg'));
+    c.style.setProperty('--press', '1');
+    c.style.setProperty('--lift', '0');
+  }
+  list.addEventListener('pointerdown', (e) => {
+    const card = e.target.closest('.crm-card');
+    if (!card || e.target.closest('button, a')) return;
+    release();
+    const ev = { clientX: e.clientX, clientY: e.clientY };
+    // petit délai : si c'est un défilement, le toucher est annulé avant que la carte ne réagisse
+    timer = setTimeout(() => {
+      active = card;
+      card.classList.add('touching');
+      card.style.setProperty('--press', '0.985');
+      card.style.setProperty('--lift', '1');
+      tilt(card, ev);
+    }, 70);
+  });
+  list.addEventListener('pointermove', (e) => { if (active) tilt(active, e); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => list.addEventListener(t, release));
+  scroller.addEventListener('scroll', release, { passive: true });
+}
+
 loadCRM();
 loadTasks();
 updateTodayHeader();
 initGoogleAuth();
 setupNotifPrompt();
 initScreenTime();
+initNightMode();
+initGrowTransitions();
+initCrmCards();
 updateWeatherWidget();
 maybeShowMorningBrief();
 setInterval(()=>{ renderAll(); }, 60000);
