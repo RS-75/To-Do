@@ -4156,7 +4156,11 @@ function initGrowTransitions() {
     ['sgScreenTime', 'scroll', '.sg-scroll'], ['sgBrief', 'scroll', '.sg-scroll']
   ];
 
-  function stop(el) { if (el._sgAnim) { try { el._sgAnim.cancel(); } catch(_) {} el._sgAnim = null; } }
+  function stop(el) {
+    if (el._sgAnim) { try { el._sgAnim.cancel(); } catch(_) {} el._sgAnim = null; }
+    // sécurité : annule toute animation résiduelle (ex. un état "forwards" resté bloqué)
+    if (el.getAnimations) el.getAnimations().forEach(x => { try { x.cancel(); } catch(_) {} });
+  }
   function cleanup(el) { el.classList.remove('sg-grow'); el.style.transformOrigin = ''; el._sgAnim = null; }
 
   function growOpen(el, kind) {
@@ -4192,7 +4196,8 @@ function initGrowTransitions() {
       : [{ transform: 'scale(1)' }, { transform: 'scale(.94)' }];
     const a = el.animate(frames, { duration: 280, easing: 'cubic-bezier(.4,0,.9,.4)', fill: fade ? 'forwards' : 'none' });
     el._sgAnim = a;
-    a.onfinish = () => cleanup(el);
+    // on annule l'animation à la fin, sinon l'état final (invisible) resterait appliqué
+    a.onfinish = () => { try { a.cancel(); } catch(_) {} cleanup(el); };
   }
 
   defs.forEach(([id, kind, sel]) => {
