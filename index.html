@@ -896,6 +896,215 @@
   .scan-raw summary{ cursor: pointer; padding: 4px 0; }
   .scan-raw pre{ white-space: pre-wrap; margin: 6px 0 0; padding: 10px; border-radius: 10px; background: var(--sg-fill); font-family: inherit; max-height: 130px; overflow-y: auto; }
   .scan-hint{ font-size: 11.5px; color: var(--ink-soft); text-align: center; line-height: 1.45; margin-top: 8px; }
+
+  /* =====================================================
+     BRIEF : refonte (logo, bulles, lecture à voix haute) + SCAN : bulle épurée
+     ===================================================== */
+  .sg-overlay{
+    --g1: var(--accent);
+    --g2: var(--accent);
+    --bf-a: rgba(255,255,255,.66);
+    --bf-b: rgba(255,255,255,.30);
+    --bf-l1: rgba(255,255,255,.95);
+    --bf-l2: rgba(255,255,255,.25);
+    --bf-l3: rgba(255,255,255,.55);
+    --bf-soft: rgba(255,255,255,.55);
+  }
+  @supports (color: color-mix(in srgb, red, blue)){
+    .sg-overlay{ --g2: color-mix(in srgb, var(--accent) 45%, #ff7a9c); }
+    [data-theme="glass-light"] .sg-overlay{ --g2: color-mix(in srgb, var(--accent) 55%, #7de3ff); }
+  }
+  [data-theme="dark"] .sg-overlay, [data-theme="glass-dark"] .sg-overlay{
+    --bf-a: rgba(52,52,62,.62);
+    --bf-b: rgba(26,26,34,.38);
+    --bf-l1: rgba(255,255,255,.30);
+    --bf-l2: rgba(255,255,255,.05);
+    --bf-l3: rgba(255,255,255,.16);
+    --bf-soft: rgba(255,255,255,.08);
+  }
+
+  .bf-top{ display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; }
+  .bf-brand{ display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .bf-brand svg{ flex: 0 0 auto; filter: drop-shadow(0 6px 14px var(--accent-soft)); }
+  .bf-brand-t{ display: flex; flex-direction: column; line-height: 1.1; }
+  .bf-brand-t b{ font-family: 'Fraunces', serif; font-weight: 600; font-size: 19px; letter-spacing: -.01em; }
+  .bf-brand-t span{ font-size: 10.5px; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-soft); font-weight: 600; margin-top: 3px; }
+  .bf-top-actions{ display: flex; align-items: center; gap: 8px; }
+  .bf-listen{
+    display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px 0 11px; border-radius: 20px; cursor: pointer;
+    background: linear-gradient(135deg, var(--g1), var(--g2)); color: #fff; border: none; font-size: 13px; font-weight: 600;
+    font-family: 'Inter', sans-serif; box-shadow: 0 8px 20px var(--accent-soft), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .bf-listen:active{ transform: scale(.96); }
+  .bf-listen svg{ width: 16px; height: 16px; }
+  .bf-eq{ display: none; align-items: flex-end; gap: 2px; height: 14px; }
+  .bf-eq i{ width: 3px; border-radius: 2px; background: #fff; animation: bfEq .9s ease-in-out infinite; }
+  .bf-eq i:nth-child(1){ height: 6px; animation-delay: -.2s; } .bf-eq i:nth-child(2){ height: 12px; animation-delay: -.5s; } .bf-eq i:nth-child(3){ height: 8px; animation-delay: -.8s; }
+  @keyframes bfEq{ 0%,100%{ transform: scaleY(.45); } 50%{ transform: scaleY(1.15); } }
+  .bf-listen.speaking .bf-eq{ display: flex; }
+  .bf-listen.speaking svg{ display: none; }
+
+  .bf-panel{
+    position: relative; border-radius: 26px; padding: 18px;
+    background: linear-gradient(145deg, var(--bf-a), var(--bf-b));
+    backdrop-filter: blur(26px) saturate(170%); -webkit-backdrop-filter: blur(26px) saturate(170%);
+    box-shadow: var(--sg-shadow), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .bf-panel::before{
+    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+    background: linear-gradient(145deg, var(--bf-l1), var(--bf-l2) 45%, var(--bf-l3));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  }
+  .bf-head{ display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .bf-ico{
+    width: 32px; height: 32px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+    background: linear-gradient(135deg, var(--g1), var(--g2)); color: #fff; box-shadow: 0 6px 14px var(--accent-soft), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .bf-ico svg{ width: 17px; height: 17px; }
+  .bf-ico.rust{ background: linear-gradient(135deg, var(--rust), #e08a5f); box-shadow: 0 6px 14px var(--rust-soft), inset 0 1px 0 rgba(255,255,255,.35); }
+  .bf-ico.sage{ background: linear-gradient(135deg, var(--sage), #9bb28a); box-shadow: 0 6px 14px var(--sage-soft), inset 0 1px 0 rgba(255,255,255,.35); }
+  .bf-ico.blue{ background: linear-gradient(135deg, var(--gcal), #8fb4e8); box-shadow: 0 6px 14px var(--gcal-soft), inset 0 1px 0 rgba(255,255,255,.35); }
+  .bf-title{ font-size: 15px; font-weight: 600; letter-spacing: -.005em; flex: 1; }
+  .bf-count{ font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 12px; background: var(--bf-soft); font-variant-numeric: tabular-nums; }
+
+  .bf-hero{ padding: 6px 4px 4px; }
+  .bf-hello{
+    font-family: 'Fraunces', serif; font-weight: 500; font-size: 40px; line-height: 1.04; letter-spacing: -.02em; margin: 0 0 10px;
+    background: linear-gradient(120deg, var(--ink) 30%, var(--g1) 75%, var(--g2));
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  }
+  .bf-date{
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 13px 6px 10px; border-radius: 20px; font-size: 13px; font-weight: 500; text-transform: capitalize;
+    background: var(--bf-soft); border: 1px solid var(--bf-l3);
+  }
+  .bf-date svg{ width: 15px; height: 15px; color: var(--g1); }
+
+  .bf-wx{ display: flex; align-items: center; gap: 14px; cursor: pointer; }
+  .bf-wx-ico{
+    width: 62px; height: 62px; border-radius: 22px; display: flex; align-items: center; justify-content: center; font-size: 34px; flex: 0 0 auto;
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.75), var(--bf-soft)); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 8px 20px rgba(0,0,0,.08);
+  }
+  .bf-wx-main{ flex: 1; min-width: 0; }
+  .bf-wx-temp{ font-family: 'Fraunces', serif; font-size: 36px; font-weight: 500; line-height: 1; letter-spacing: -.02em; }
+  .bf-wx-lbl{ font-size: 13px; color: var(--ink-soft); margin-top: 3px; }
+  .bf-pills{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .bf-pill{ font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 12px; background: var(--bf-soft); border: 1px solid var(--bf-l3); white-space: nowrap; }
+  .bf-chev{ color: var(--ink-faint); font-size: 22px; align-self: flex-start; }
+  .bf-wx-empty{ font-size: 13.5px; color: var(--ink-soft); padding: 4px 0; }
+
+  .bf-stats{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .bf-stat{ padding: 14px 10px 12px; text-align: center; border-radius: 22px; }
+  .bf-stat .bf-ico{ margin: 0 auto 8px; width: 30px; height: 30px; border-radius: 10px; }
+  .bf-stat .bf-ico svg{ width: 16px; height: 16px; }
+  .bf-num{ font-family: 'Fraunces', serif; font-size: 30px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+  .bf-lbl{ font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); font-weight: 600; margin-top: 6px; }
+
+  .bf-line{ position: relative; display: flex; flex-direction: column; }
+  .bf-row{ position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 0 0 14px 0; }
+  .bf-row:last-child{ padding-bottom: 0; }
+  .bf-row::before{ content: ""; position: absolute; left: 62px; top: 14px; bottom: -2px; width: 2px; background: linear-gradient(var(--bf-l3), transparent); }
+  .bf-row:last-child::before{ display: none; }
+  .bf-time{ width: 52px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; padding-top: 2px; color: var(--ink); }
+  .bf-dot{ position: relative; z-index: 1; width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: 0 0 auto; background: linear-gradient(135deg, var(--g1), var(--g2)); box-shadow: 0 0 0 4px var(--bf-soft); }
+  .bf-what{ flex: 1; min-width: 0; font-size: 14.5px; line-height: 1.35; padding-top: 1px; overflow-wrap: anywhere; }
+  .bf-more{ margin: 12px 0 0 74px; font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+  .bf-empty{ font-size: 14px; color: var(--ink-soft); text-align: center; padding: 6px 0 2px; line-height: 1.55; }
+
+  .bf-crm-row{ display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+  .bf-crm-row + .bf-crm-row{ border-top: 1px solid var(--bf-l3); }
+  .bf-avatar{ width: 38px; height: 38px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; color: #fff; flex: 0 0 auto; background: linear-gradient(135deg, var(--g1), var(--g2)); box-shadow: 0 6px 14px var(--accent-soft); }
+  .bf-crm-main{ flex: 1; min-width: 0; }
+  .bf-crm-name{ font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bf-crm-sub{ font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bf-badge{ font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 12px; color: #fff; white-space: nowrap; }
+  .bf-late{ margin-top: 8px; padding: 9px 12px; border-radius: 14px; font-size: 12.5px; font-weight: 600; color: var(--rust); background: var(--rust-soft); }
+
+  #sgBrief .sg-cta{
+    position: relative; overflow: hidden; margin-top: 8px; padding: 17px; border-radius: 22px; font-size: 16px; letter-spacing: -.005em;
+    background: linear-gradient(135deg, var(--g1), var(--g2)); box-shadow: 0 14px 34px var(--accent-soft), inset 0 1px 0 rgba(255,255,255,.45);
+  }
+  #sgBrief .sg-cta::after{
+    content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; transform: skewX(-20deg);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); animation: bfShine 3.8s ease-in-out infinite;
+  }
+  @keyframes bfShine{ 0%, 60%{ left: -60%; } 100%{ left: 140%; } }
+
+  /* SCAN : bulle épurée */
+  #sgScan .sg-card{
+    max-width: 400px; padding: 22px 20px 20px; border-radius: 30px; overflow-x: hidden;
+    background: linear-gradient(145deg, var(--bf-a), var(--bf-b));
+    backdrop-filter: blur(30px) saturate(170%); -webkit-backdrop-filter: blur(30px) saturate(170%);
+    border: none; box-shadow: var(--sg-shadow), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  #sgScan .sg-card::before{
+    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+    background: linear-gradient(145deg, var(--bf-l1), var(--bf-l2) 45%, var(--bf-l3));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  }
+  .sc-head{ display: flex; align-items: center; gap: 12px; margin: 0 42px 16px 0; }
+  .sc-badge{ width: 42px; height: 42px; border-radius: 15px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; color: #fff;
+    background: linear-gradient(135deg, var(--g1), var(--g2)); box-shadow: 0 8px 20px var(--accent-soft), inset 0 1px 0 rgba(255,255,255,.4); }
+  .sc-badge svg{ width: 22px; height: 22px; }
+  .sc-head-t{ display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+  .sc-head-t b{ font-family: 'Fraunces', serif; font-weight: 600; font-size: 19px; letter-spacing: -.01em; }
+  .sc-head-t span{ font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+
+  .sc-photo{ position: relative; border-radius: 18px; overflow: hidden; margin-bottom: 16px; background: var(--bf-soft); box-shadow: 0 10px 26px rgba(0,0,0,.14); }
+  .sc-photo img{ display: block; width: 100%; height: 150px; object-fit: cover; }
+  .sc-photo.scanning::after{
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 46px;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,.55) 80%, rgba(255,255,255,.9) 100%);
+    border-bottom: 2px solid #fff; box-shadow: 0 6px 18px var(--g1); animation: scScan 1.7s ease-in-out infinite alternate;
+  }
+  @keyframes scScan{ from{ transform: translateY(-46px); } to{ transform: translateY(150px); } }
+  .sc-photo.done{ display: flex; align-items: center; gap: 12px; padding: 8px; height: auto; background: var(--bf-soft); }
+  .sc-photo.done img{ width: 84px; height: 56px; border-radius: 12px; flex: 0 0 auto; }
+  .sc-photo.done .sc-ok{ font-size: 13px; line-height: 1.35; color: var(--ink-soft); }
+  .sc-photo.done .sc-ok b{ display: block; color: var(--ink); font-size: 14px; }
+
+  .sc-status{ text-align: center; font-size: 14px; font-weight: 500; margin-bottom: 10px; }
+  .sc-bar{ height: 5px; border-radius: 5px; background: var(--sg-track); overflow: hidden; }
+  .sc-bar i{ display: block; height: 100%; width: 0; border-radius: 5px; background: linear-gradient(90deg, var(--g1), var(--g2)); transition: width .3s ease; }
+  .sc-hint{ font-size: 11.5px; color: var(--ink-soft); text-align: center; line-height: 1.5; margin-top: 12px; }
+
+  .sc-group{ border-radius: 20px; background: var(--bf-soft); border: 1px solid var(--bf-l3); overflow: hidden; margin-bottom: 12px; }
+  .sc-row{ display: flex; align-items: center; gap: 12px; padding: 0 14px; min-height: 50px; }
+  .sc-row + .sc-row{ border-top: 1px solid var(--bf-l3); }
+  .sc-row svg{ width: 18px; height: 18px; flex: 0 0 auto; color: var(--g1); }
+  .sc-row input, .sc-row textarea{
+    flex: 1; min-width: 0; width: auto; border: none !important; background: transparent !important; outline: none !important; box-shadow: none !important;
+    padding: 14px 0; margin: 0; font-size: 15px; color: var(--ink); font-family: 'Inter', sans-serif; border-radius: 0;
+  }
+  .sc-row input::placeholder, .sc-row textarea::placeholder{ color: var(--ink-faint); }
+  .sc-row.note{ align-items: flex-start; }
+  .sc-row.note svg{ margin-top: 16px; }
+  .sc-row textarea{ min-height: 74px; resize: none; line-height: 1.45; font-size: 14px; }
+  .sc-row.filled svg{ color: var(--sage); }
+
+  .sc-switch{ display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 4px 14px; font-size: 14px; cursor: pointer; }
+  .sc-switch input{ display: none; }
+  .sc-track{ width: 46px; height: 28px; border-radius: 16px; background: var(--sg-track); position: relative; transition: background .25s; flex: 0 0 auto; }
+  .sc-track::after{ content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.3,1.4,.5,1); }
+  .sc-switch input:checked + .sc-track{ background: linear-gradient(135deg, var(--g1), var(--g2)); }
+  .sc-switch input:checked + .sc-track::after{ transform: translateX(18px); }
+
+  .sc-primary{
+    width: 100%; border: none; cursor: pointer; padding: 16px; border-radius: 20px; font-size: 16px; font-weight: 600; color: #fff; font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, var(--g1), var(--g2)); box-shadow: 0 12px 28px var(--accent-soft), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .sc-primary:active{ transform: scale(.985); }
+  .sc-ghost{ display: block; width: 100%; margin-top: 6px; padding: 12px; border: none; background: none; color: var(--ink-soft); font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .sc-raw{ text-align: center; margin: 2px 0 10px; }
+  .sc-raw summary{ font-size: 12px; color: var(--ink-soft); cursor: pointer; list-style: none; text-decoration: underline; text-underline-offset: 3px; }
+  .sc-raw summary::-webkit-details-marker{ display: none; }
+  .sc-raw pre{ text-align: left; white-space: pre-wrap; margin: 8px 0 0; padding: 12px; border-radius: 14px; background: var(--bf-soft); font-family: inherit; font-size: 12px; color: var(--ink-soft); max-height: 120px; overflow-y: auto; }
+  .sc-err{ font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); margin: 0 0 14px; padding: 12px 14px; border-radius: 16px; background: var(--bf-soft); border: 1px solid var(--bf-l3); }
+
+  @media (prefers-reduced-motion: reduce){
+    #sgBrief .sg-cta::after, .sc-photo.scanning::after, .bf-eq i{ animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -1053,6 +1262,13 @@
       <span style="display:flex; align-items:center; gap:10px; font-size: 15px;">
         <span style="font-size:18px; line-height:1;">☀️</span>
         Revoir le briefing du jour
+      </span>
+      <span style="color:var(--ink-faint); font-size: 20px; line-height: 1;">›</span>
+    </button>
+    <button class="modern-toggle" id="speakDayBtn" style="margin-top: 10px; width: 100%; padding: 16px;">
+      <span style="display:flex; align-items:center; gap:10px; font-size: 15px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);"><path d="M4 9.5v5h3.5L12.5 19V5L7.5 9.5H4z"/><path d="M16 9a4 4 0 010 6M18.6 6.4a8 8 0 010 11.2"/></svg>
+        Écouter ma journée
       </span>
       <span style="color:var(--ink-faint); font-size: 20px; line-height: 1;">›</span>
     </button>
@@ -1367,7 +1583,30 @@
 <!-- ===== SUPER-GLASS : BRIEFING DU MATIN ===== -->
 <div id="sgBrief" class="sg-overlay sg-page" aria-hidden="true">
   <div class="sg-scroll">
-    <div class="sg-topbar"><span></span><button type="button" class="sg-x" id="sgBriefClose" aria-label="Fermer">✕</button></div>
+    <div class="bf-top">
+      <div class="bf-brand">
+      <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true">
+        <defs>
+          <linearGradient id="jgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--g1)"/><stop offset="1" style="stop-color:var(--g2)"/></linearGradient>
+          <linearGradient id="jgB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        </defs>
+        <rect x="2" y="2" width="44" height="44" rx="14" fill="url(#jgA)"/>
+        <rect x="2" y="2" width="44" height="44" rx="14" fill="url(#jgB)"/>
+        <path d="M13 32a11 11 0 0 1 22 0" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>
+        <path d="M9 36h30" stroke="#fff" stroke-width="3.2" stroke-linecap="round" opacity=".9"/>
+        <path d="M24 11.5v3M11.8 17.2l2.1 2.1M36.2 17.2l-2.1 2.1" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
+        <div class="bf-brand-t"><b>Journée</b><span>Briefing du jour</span></div>
+      </div>
+      <div class="bf-top-actions">
+        <button type="button" class="bf-listen" id="bfListen" aria-label="Écouter le briefing">
+          <span class="bf-eq"><i></i><i></i><i></i></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12.5 19V5L7.5 9.5H4z"/><path d="M16 9a4 4 0 010 6M18.6 6.4a8 8 0 010 11.2"/></svg>
+          <span class="bf-listen-t">Écouter</span>
+        </button>
+        <button type="button" class="sg-x" id="sgBriefClose" aria-label="Fermer">✕</button>
+      </div>
+    </div>
     <div id="sgBriefBody"></div>
     <button type="button" class="sg-cta" id="sgBriefGo">Commencer la journée</button>
   </div>
@@ -1386,7 +1625,10 @@
 <div id="sgScan" class="sg-overlay sg-center" aria-hidden="true">
   <div class="sg-card">
     <button type="button" class="sg-x" id="sgScanClose" aria-label="Fermer">✕</button>
-    <div class="qa-title" style="margin:0 40px 12px 0;">Carte de visite</div>
+    <div class="sc-head">
+      <div class="sc-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V6a3 3 0 013-3h2M16 3h2a3 3 0 013 3v2M21 16v2a3 3 0 01-3 3h-2M8 21H6a3 3 0 01-3-3v-2"/><rect x="7" y="9" width="10" height="6.5" rx="1.5"/><path d="M9.5 12h5"/></svg></div>
+      <div class="sc-head-t"><b>Carte de visite</b><span id="scanSub">Lecture en cours…</span></div>
+    </div>
     <div id="sgScanBody"></div>
   </div>
 </div>
@@ -3885,89 +4127,242 @@ function dayKey(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-function renderBriefWeather() {
-  const el = document.getElementById('sgBriefWeather');
-  if (!el) return;
-  const w = weatherState;
-  if (!w) { el.innerHTML = `<div class="sg-empty" style="padding:2px 0;">Météo indisponible (localisation non autorisée)</div>`; return; }
-  el.innerHTML = `
-    <div class="sg-wx-ico">${weatherIconFor(w.code)}</div>
-    <div class="sg-wx-main">
-      <div class="sg-wx-temp">${w.temp}° <span style="font-size:14px; font-family:'Inter',sans-serif; color:var(--ink-soft); font-weight:500;">${weatherLabelFor(w.code)}</span></div>
-      <div class="sg-wx-sub">${w.min}° / ${w.max}° · 💧 ${w.popMax ?? 0}% · 💨 ${w.wind} km/h${w.city ? ' · ' + escapeHtml(w.city) : ''}</div>
-    </div>
-    <div class="sg-chev">›</div>`;
+/* ---------- Icônes (traits fins, style cohérent) ---------- */
+const UI_ICONS = {
+  calendar: '<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.2v.1"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.8a3.5 3.5 0 010 6.4M18.5 14.8c1.8.7 2.9 2.4 3.2 5.2"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 20.5c.8-4 4-6 8-6s7.2 2 8 6"/>',
+  building: '<rect x="4" y="3" width="11" height="18" rx="2"/><path d="M15 9h3a2 2 0 012 2v10h-5M8 7.5h3M8 11.5h3M8 15.5h3"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3.5 7.5l8.5 6 8.5-6"/>',
+  phone: '<path d="M6.5 3.5h3l1.5 4-2 1.3a11 11 0 005.2 5.2l1.3-2 4 1.5v3a2.5 2.5 0 01-2.7 2.5A15.5 15.5 0 014 6.2 2.5 2.5 0 016.5 3.5z"/>',
+  note: '<path d="M5 4.5h14M5 9.5h14M5 14.5h9M5 19.5h6"/>'
+};
+function ico(name) {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (UI_ICONS[name] || '') + '</svg>';
 }
 
-function renderMorningBrief() {
+function getBriefData() {
   const now = new Date();
   const sod = startOfDay(now);
   const eod = new Date(sod.getTime() + 86400000);
   const weekAgo = new Date(sod.getTime() - 7 * 86400000);
-
-  const todays = tasks
-    .filter(t => t.due && new Date(t.due) >= sod && new Date(t.due) < eod)
+  const todays = tasks.filter(t => t.due && new Date(t.due) >= sod && new Date(t.due) < eod)
     .sort((a, b) => new Date(a.due) - new Date(b.due));
   const todo = todays.filter(t => !t.done);
-  const doneCount = todays.length - todo.length;
-  // les événements Google importés ne sont pas des "tâches en retard"
   const overdue = tasks.filter(t => !t.gcalEventId && t.due && !t.done && new Date(t.due) < sod && new Date(t.due) >= weekAgo).length;
-
   const crmOpen = (c) => c.date && c.status !== 'conclu' && c.status !== 'refuse';
   const crmToday = crmData.filter(c => crmOpen(c) && new Date(c.date) >= sod && new Date(c.date) < eod)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
   const crmLate = crmData.filter(c => crmOpen(c) && new Date(c.date) < sod).length;
-
   const h = now.getHours();
   const greet = h < 5 ? 'Bonsoir' : h < 18 ? 'Bonjour' : 'Bonsoir';
   let first = '';
   try {
     const n = (gName && gName.textContent || '').trim();
-    if (n && n !== 'Non connecté') first = ' ' + n.split(' ')[0];
+    if (n && n !== 'Non connecté') first = n.split(' ')[0];
   } catch(e) {}
+  return { now, todays, todo, doneCount: todays.length - todo.length, overdue, crmToday, crmLate, greet, first };
+}
 
-  const agenda = todo.slice(0, 5).map(t => `
-    <div class="sg-item">
-      <span class="t">${fmtTime(t.due)}</span>
-      <span class="x">${escapeHtml(t.text)}</span>
-    </div>`).join('');
-  const more = todo.length > 5 ? `<div class="sg-empty" style="padding:6px 0 0;">+ ${todo.length - 5} autre${todo.length - 5 > 1 ? 's' : ''}</div>` : '';
+function renderBriefWeather() {
+  const el = document.getElementById('sgBriefWeather');
+  if (!el) return;
+  const w = weatherState;
+  if (!w) { el.innerHTML = `<div class="bf-wx-empty">Météo indisponible (localisation non autorisée)</div>`; return; }
+  el.innerHTML = `
+    <div class="bf-wx-ico">${weatherIconFor(w.code)}</div>
+    <div class="bf-wx-main">
+      <div class="bf-wx-temp">${w.temp}°</div>
+      <div class="bf-wx-lbl">${weatherLabelFor(w.code)}${w.city ? ' · ' + escapeHtml(w.city) : ''}</div>
+      <div class="bf-pills">
+        <span class="bf-pill">💧 ${w.popMax ?? 0}%</span>
+        <span class="bf-pill">💨 ${w.wind} km/h</span>
+        <span class="bf-pill">${w.min}° / ${w.max}°</span>
+      </div>
+    </div>
+    <div class="bf-chev">›</div>`;
+}
 
-  const crmHtml = crmToday.slice(0, 3).map(c => `
-    <div class="sg-item">
-      <span class="t">${fmtTime(c.date)}</span>
-      <span class="x">${escapeHtml(c.name)}${c.company ? ` <span class="s">· ${escapeHtml(c.company)}</span>` : ''}</span>
-      <span class="s">${(CRM_STATUSES[c.status] || CRM_STATUSES.attente).label}</span>
+function animateCounts(root) {
+  root.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.count, 10) || 0;
+    if (target === 0) { el.textContent = '0'; return; }
+    const t0 = performance.now(), dur = 700;
+    const step = (t) => {
+      const p = Math.min(1, (t - t0) / dur);
+      el.textContent = String(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = String(target);
+    };
+    el.textContent = '0';
+    requestAnimationFrame(step);
+  });
+}
+
+function renderMorningBrief() {
+  const d = getBriefData();
+  const dateLong = d.now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const rows = d.todo.slice(0, 5).map(t => `
+    <div class="bf-row">
+      <span class="bf-time">${fmtTime(t.due)}</span>
+      <span class="bf-dot"></span>
+      <span class="bf-what">${escapeHtml(t.text)}</span>
     </div>`).join('');
+  const more = d.todo.length > 5 ? `<div class="bf-more">+ ${d.todo.length - 5} autre${d.todo.length - 5 > 1 ? 's' : ''}</div>` : '';
+
+  const crmRows = d.crmToday.slice(0, 3).map(c => {
+    const st = CRM_STATUSES[c.status] || CRM_STATUSES.attente;
+    const initial = (c.name || '?').trim().charAt(0).toUpperCase();
+    return `
+    <div class="bf-crm-row">
+      <div class="bf-avatar">${escapeHtml(initial)}</div>
+      <div class="bf-crm-main">
+        <div class="bf-crm-name">${escapeHtml(c.name)}</div>
+        <div class="bf-crm-sub">${fmtTime(c.date)}${c.company ? ' · ' + escapeHtml(c.company) : ''}</div>
+      </div>
+      <span class="bf-badge" style="background:${st.color};">${st.label}</span>
+    </div>`;
+  }).join('');
 
   sgBriefBody.innerHTML = `
-    <div class="sg-rise" style="--i:0; padding: 4px 4px 10px;">
-      <div class="sg-eyebrow">Briefing du jour</div>
-      <div class="sg-hello">${greet}${escapeHtml(first)} 👋</div>
-      <div class="sg-date">${now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+    <div class="bf-hero sg-rise" style="--i:0;">
+      <h1 class="bf-hello">${d.greet}${d.first ? ' ' + escapeHtml(d.first) : ''}</h1>
+      <span class="bf-date">${ico('calendar')}${dateLong}</span>
     </div>
-    <div class="sg-panel sg-rise" style="--i:1;">
-      <div class="sg-wx-row" id="sgBriefWeather"></div>
+
+    <div class="bf-panel sg-rise" style="--i:1;">
+      <div class="bf-wx" id="sgBriefWeather"></div>
     </div>
-    <div class="sg-chips sg-rise" style="--i:2;">
-      <div class="sg-chip"><b>${todo.length}</b><span>À faire</span></div>
-      <div class="sg-chip"><b>${doneCount}</b><span>Faites</span></div>
-      <div class="sg-chip"><b style="${overdue ? 'color:var(--rust);' : ''}">${overdue}</b><span>En retard</span></div>
+
+    <div class="bf-stats sg-rise" style="--i:2;">
+      <div class="bf-panel bf-stat"><div class="bf-ico">${ico('list')}</div><div class="bf-num" data-count="${d.todo.length}">${d.todo.length}</div><div class="bf-lbl">À faire</div></div>
+      <div class="bf-panel bf-stat"><div class="bf-ico sage">${ico('check')}</div><div class="bf-num" data-count="${d.doneCount}">${d.doneCount}</div><div class="bf-lbl">Faites</div></div>
+      <div class="bf-panel bf-stat"><div class="bf-ico ${d.overdue ? 'rust' : 'blue'}">${ico('alert')}</div><div class="bf-num" data-count="${d.overdue}" style="${d.overdue ? 'color:var(--rust);' : ''}">${d.overdue}</div><div class="bf-lbl">En retard</div></div>
     </div>
-    <div class="sg-panel sg-rise" style="--i:3;">
-      <div class="sg-eyebrow">Au programme</div>
-      ${todo.length ? `<div class="sg-list">${agenda}</div>${more}` : `<div class="sg-empty">Rien de prévu aujourd'hui ✨<br>Journée libre.</div>`}
+
+    <div class="bf-panel sg-rise" style="--i:3;">
+      <div class="bf-head">
+        <div class="bf-ico blue">${ico('calendar')}</div>
+        <div class="bf-title">Au programme</div>
+        ${d.todo.length ? `<span class="bf-count">${d.todo.length}</span>` : ''}
+      </div>
+      ${d.todo.length ? `<div class="bf-line">${rows}</div>${more}` : `<div class="bf-empty">Rien de prévu aujourd'hui ✨<br>Journée libre.</div>`}
     </div>
-    ${(crmToday.length || crmLate) ? `
-    <div class="sg-panel sg-rise" style="--i:4;">
-      <div class="sg-eyebrow">Suivi CRM</div>
-      ${crmHtml ? `<div class="sg-list">${crmHtml}</div>` : ''}
-      ${crmLate ? `<div class="sg-empty" style="padding:${crmHtml ? '8px 0 0' : '0'}; color:var(--rust);">${crmLate} relance${crmLate > 1 ? 's' : ''} en retard</div>` : ''}
+
+    ${(d.crmToday.length || d.crmLate) ? `
+    <div class="bf-panel sg-rise" style="--i:4;">
+      <div class="bf-head">
+        <div class="bf-ico">${ico('users')}</div>
+        <div class="bf-title">Suivi CRM</div>
+        ${d.crmToday.length ? `<span class="bf-count">${d.crmToday.length}</span>` : ''}
+      </div>
+      ${crmRows}
+      ${d.crmLate ? `<div class="bf-late">${d.crmLate} relance${d.crmLate > 1 ? 's' : ''} en retard</div>` : ''}
     </div>` : ''}`;
 
   renderBriefWeather();
   const wxRow = document.getElementById('sgBriefWeather');
   if (wxRow) wxRow.addEventListener('click', () => { if (weatherState) openWeatherDetail(); });
+  animateCounts(sgBriefBody);
+}
+
+/* ---------- Lecture à voix haute ---------- */
+const ttsOK = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
+let ttsOn = false;
+function ttsClean(t) {
+  return String(t || '')
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, ' ')
+    .replace(/[*_#>`~|]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+function spokenTime(date) {
+  const h = date.getHours(), m = date.getMinutes();
+  if (h === 0 && m === 0) return 'minuit';
+  if (h === 12 && m === 0) return 'midi';
+  return h + (h > 1 ? ' heures' : ' heure') + (m ? ' ' + m : '');
+}
+function spokenTemp(n) { return (n < 0 ? 'moins ' + Math.abs(n) : String(n)) + (Math.abs(n) > 1 ? ' degrés' : ' degré'); }
+function buildBriefScript() {
+  const d = getBriefData();
+  const s = [];
+  s.push(d.greet + (d.first ? ' ' + d.first : '') + '.');
+  s.push('Nous sommes ' + d.now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + '.');
+  const w = weatherState;
+  if (w) {
+    s.push('Météo : ' + weatherLabelFor(w.code).toLowerCase() + ', ' + spokenTemp(w.temp) + ', entre ' + spokenTemp(w.min) + ' et ' + spokenTemp(w.max) + '.');
+    s.push('Risque de pluie ' + (w.popMax ?? 0) + ' pour cent, vent ' + w.wind + ' kilomètres par heure.');
+    if ((w.popMax ?? 0) >= 50) s.push('Pense à prendre un parapluie.');
+  }
+  if (d.todo.length) {
+    s.push("Aujourd'hui, tu as " + d.todo.length + (d.todo.length > 1 ? ' choses' : ' chose') + ' au programme.');
+    d.todo.slice(0, 6).forEach(t => { const x = ttsClean(t.text); if (x) s.push('À ' + spokenTime(new Date(t.due)) + ', ' + x + '.'); });
+    if (d.todo.length > 6) s.push('Et ' + (d.todo.length - 6) + (d.todo.length - 6 > 1 ? ' autres.' : ' autre.'));
+  } else {
+    s.push("Rien de prévu aujourd'hui. Journée libre.");
+  }
+  if (d.overdue) s.push('Tu as ' + d.overdue + (d.overdue > 1 ? ' tâches' : ' tâche') + ' en retard.');
+  if (d.crmToday.length) {
+    s.push('Côté suivi client, ' + d.crmToday.length + (d.crmToday.length > 1 ? ' relances' : ' relance') + " aujourd'hui.");
+    d.crmToday.slice(0, 4).forEach(c => s.push(ttsClean(c.name) + ', à ' + spokenTime(new Date(c.date)) + '.'));
+  }
+  if (d.crmLate) s.push(d.crmLate + (d.crmLate > 1 ? ' relances sont' : ' relance est') + ' en retard.');
+  s.push(d.now.getHours() < 18 ? 'Bonne journée !' : 'Bonne soirée !');
+  return s;
+}
+function pickFrenchVoice() {
+  const vs = (speechSynthesis.getVoices() || []).filter(v => /^fr/i.test(v.lang));
+  if (!vs.length) return null;
+  for (const p of ['Amélie', 'Thomas', 'Audrey', 'Aurélie', 'Google français', 'Marie', 'Eddy', 'Sandy', 'Flo']) {
+    const v = vs.find(x => x.name.indexOf(p) >= 0);
+    if (v) return v;
+  }
+  return vs.find(v => v.lang === 'fr-FR') || vs[0];
+}
+function setListenUI(on) {
+  ttsOn = on;
+  const b = document.getElementById('bfListen');
+  if (!b) return;
+  b.classList.toggle('speaking', on);
+  const t = b.querySelector('.bf-listen-t');
+  if (t) t.textContent = on ? 'Arrêter' : 'Écouter';
+}
+function stopSpeaking() {
+  if (!ttsOK) return;
+  try { speechSynthesis.cancel(); } catch(_) {}
+  setListenUI(false);
+}
+function speakBrief() {
+  if (!ttsOK) return;
+  try { speechSynthesis.cancel(); } catch(_) {}
+  setListenUI(true);
+  const voice = pickFrenchVoice();
+  const script = buildBriefScript();
+  setTimeout(() => {
+    script.forEach((line, i) => {
+      const u = new SpeechSynthesisUtterance(line);
+      u.lang = 'fr-FR';
+      if (voice) u.voice = voice;
+      u.rate = 1.0; u.pitch = 1.0;
+      if (i === script.length - 1) { u.onend = () => setListenUI(false); u.onerror = () => setListenUI(false); }
+      speechSynthesis.speak(u);
+    });
+  }, 60);
+}
+function initBriefAudio() {
+  const b = document.getElementById('bfListen');
+  if (!b) return;
+  if (!ttsOK) { b.style.display = 'none'; const sb = document.getElementById('speakDayBtn'); if (sb) sb.style.display = 'none'; return; }
+  b.addEventListener('click', () => { if (ttsOn) stopSpeaking(); else speakBrief(); });
+  const sb = document.getElementById('speakDayBtn');
+  if (sb) sb.addEventListener('click', () => { openMorningBrief(); speakBrief(); });
+  new MutationObserver(() => { if (!sgBrief.classList.contains('open')) stopSpeaking(); })
+    .observe(sgBrief, { attributes: true, attributeFilter: ['class'] });
+  try { speechSynthesis.getVoices(); } catch(_) {}
 }
 
 function openMorningBrief() {
@@ -3975,7 +4370,7 @@ function openMorningBrief() {
   sgOpen(sgBrief);
   if (!weatherState || !weatherState.updatedAt || Date.now() - weatherState.updatedAt > 30 * 60 * 1000) updateWeatherWidget();
 }
-function closeMorningBrief() { sgClose(sgBrief); }
+function closeMorningBrief() { if (typeof stopSpeaking === 'function') stopSpeaking(); sgClose(sgBrief); }
 
 function maybeShowMorningBrief() {
   const today = dayKey();
@@ -4550,13 +4945,19 @@ function initCardScan() {
     if (f) startScan(f);
   });
 
-  function thumbHtml() { return thumbUrl ? `<img class="scan-thumb" src="${thumbUrl}" alt="Carte">` : ''; }
+  function thumbHtml(mode, label) {
+    if (!thumbUrl) return '';
+    if (mode === 'done') return `<div class="sc-photo done"><img src="${thumbUrl}" alt="Carte"><div class="sc-ok"><b>${label || 'Carte lue'}</b>Vérifie les infos ci-dessous</div></div>`;
+    return `<div class="sc-photo scanning"><img src="${thumbUrl}" alt="Carte"></div>`;
+  }
+  function setSub(t) { const s = document.getElementById('scanSub'); if (s) s.textContent = t; }
 
   function showLoading(text, pct) {
-    body.innerHTML = `${thumbHtml()}
-      <div class="scan-status" id="scanStatus">${text}</div>
-      <div class="scan-progress"><i id="scanBar" style="width:${pct || 0}%"></i></div>
-      <div class="scan-hint">La lecture se fait sur ton téléphone. La 1re fois, un petit module se télécharge (connexion requise).</div>`;
+    setSub('Lecture en cours…');
+    body.innerHTML = `${thumbHtml('scanning')}
+      <div class="sc-status" id="scanStatus">${text}</div>
+      <div class="sc-bar"><i id="scanBar" style="width:${pct || 0}%"></i></div>
+      <div class="sc-hint">La lecture se fait sur ton téléphone.<br>La 1re fois, un petit module se télécharge (connexion requise).</div>`;
   }
   function setProgress(text, pct) {
     const s = document.getElementById('scanStatus'), b = document.getElementById('scanBar');
@@ -4599,27 +5000,30 @@ function initCardScan() {
     }
   }
 
-  function field(id, label, val, type) {
-    return `<label class="scan-field"><span>${label}</span><input type="${type || 'text'}" id="${id}" value="${escapeHtml(val || '')}"></label>`;
+  function row(icon, id, ph, type, val) {
+    return `<div class="sc-row${val ? ' filled' : ''}">${ico(icon)}<input type="${type || 'text'}" id="${id}" placeholder="${ph}" value="${escapeHtml(val || '')}" autocomplete="off"></div>`;
   }
 
   function showReview(p, raw, errMsg) {
     const empty = !p || (!p.name && !p.company && !p.email && !p.phone);
     const notes = p ? buildCardNotes(p) : '';
-    const msg = errMsg || (empty ? "Je n'ai pas réussi à lire cette carte. Essaie avec plus de lumière, à plat et bien cadrée." : 'Vérifie les infos lues, corrige si besoin :');
-    body.innerHTML = `${thumbHtml()}
-      <div class="scan-status" style="text-align:left; padding-top:0;">${msg}</div>
-      ${field('scanName', 'Nom', p && p.name)}
-      ${field('scanCompany', 'Entreprise', p && p.company)}
-      ${field('scanEmail', 'Email', p && p.email, 'email')}
-      ${field('scanPhone', 'Téléphone', p && p.phone, 'tel')}
-      <label class="scan-field"><span>Notes (fonction, site, adresse)</span><textarea id="scanNotes">${escapeHtml(notes)}</textarea></label>
-      ${raw ? `<details class="scan-raw"><summary>Voir le texte lu</summary><pre>${escapeHtml(raw)}</pre></details>` : ''}
-      <label class="scan-check"><input type="checkbox" id="scanAttach" checked> Joindre la photo à la fiche</label>
-      <div class="scan-actions">
-        <button type="button" class="ko" id="scanCancel">Annuler</button>
-        <button type="button" class="ok" id="scanUse">Remplir la fiche</button>
-      </div>`;
+    setSub('Vérifie et valide');
+    const msg = errMsg || (empty ? "Je n'ai pas réussi à lire cette carte. Essaie avec plus de lumière, à plat et bien cadrée." : '');
+    body.innerHTML = `${thumbHtml('done', empty ? 'Lecture incomplète' : 'Carte lue')}
+      ${msg ? `<p class="sc-err">${msg}</p>` : ''}
+      <div class="sc-group">
+        ${row('user', 'scanName', 'Nom', 'text', p && p.name)}
+        ${row('building', 'scanCompany', 'Entreprise', 'text', p && p.company)}
+        ${row('mail', 'scanEmail', 'Email', 'email', p && p.email)}
+        ${row('phone', 'scanPhone', 'Téléphone', 'tel', p && p.phone)}
+      </div>
+      <div class="sc-group">
+        <div class="sc-row note">${ico('note')}<textarea id="scanNotes" placeholder="Fonction, site, adresse…">${escapeHtml(notes)}</textarea></div>
+      </div>
+      ${raw ? `<details class="sc-raw"><summary>Voir le texte lu</summary><pre>${escapeHtml(raw)}</pre></details>` : ''}
+      <label class="sc-switch"><span>Joindre la photo à la fiche</span><input type="checkbox" id="scanAttach" checked><span class="sc-track"></span></label>
+      <button type="button" class="sc-primary" id="scanUse">Remplir la fiche</button>
+      <button type="button" class="sc-ghost" id="scanCancel">Annuler</button>`;
     document.getElementById('scanCancel').addEventListener('click', closeScan);
     document.getElementById('scanUse').addEventListener('click', applyScan);
   }
@@ -4657,6 +5061,7 @@ initNightMode();
 initGrowTransitions();
 initCrmCards();
 initCardScan();
+initBriefAudio();
 updateWeatherWidget();
 maybeShowMorningBrief();
 setInterval(()=>{ renderAll(); }, 60000);
