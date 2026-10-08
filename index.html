@@ -862,6 +862,40 @@
     .crm-card, .crm-card.touching{ transition: none; transform: none; }
     .sg-page::before, .sg-page::after{ animation: none; }
   }
+
+  /* =====================================================
+     SCAN DE CARTE DE VISITE
+     ===================================================== */
+  #crmScanBtn{
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    margin-bottom: 12px; padding: 12px; border-radius: 12px; cursor: pointer;
+    border: 1px dashed var(--accent); background: transparent; color: var(--accent);
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+  }
+  #crmScanBtn:active{ transform: scale(.985); }
+  #sgScan{ z-index: 220; }
+  #sgScan .sg-card{ max-width: 420px; }
+  .scan-thumb{ width: 100%; max-height: 150px; object-fit: cover; border-radius: 14px; border: 1px solid var(--sg-edge); display: block; margin-bottom: 14px; }
+  .scan-status{ text-align: center; font-size: 14px; color: var(--ink-soft); padding: 4px 0 8px; }
+  .scan-progress{ height: 8px; border-radius: 8px; background: var(--sg-track); overflow: hidden; margin: 10px 0 4px; }
+  .scan-progress i{ display: block; height: 100%; width: 0%; background: var(--accent); border-radius: 8px; transition: width .25s ease; }
+  .scan-field{ display: block; margin-bottom: 10px; }
+  .scan-field span{ display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); font-weight: 600; margin-bottom: 4px; }
+  .scan-field input, .scan-field textarea{
+    width: 100%; box-sizing: border-box; padding: 11px 12px; border-radius: 12px; font-size: 15px;
+    border: 1px solid var(--sg-edge); background: var(--sg-fill); color: var(--ink); font-family: 'Inter', sans-serif; margin: 0;
+  }
+  .scan-field textarea{ resize: vertical; min-height: 62px; }
+  .scan-check{ display: flex; align-items: center; gap: 10px; font-size: 13.5px; margin: 6px 0 14px; cursor: pointer; }
+  .scan-check input{ width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
+  .scan-actions{ display: flex; gap: 10px; }
+  .scan-actions button{ flex: 1; border-radius: 14px; padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .scan-actions .ok{ flex: 2; border: none; background: var(--accent); color: #fff; box-shadow: 0 8px 22px var(--accent-soft); }
+  .scan-actions .ko{ border: 1px solid var(--sg-edge); background: var(--sg-fill); color: var(--ink); }
+  .scan-raw{ font-size: 12px; color: var(--ink-soft); margin: 0 0 12px; }
+  .scan-raw summary{ cursor: pointer; padding: 4px 0; }
+  .scan-raw pre{ white-space: pre-wrap; margin: 6px 0 0; padding: 10px; border-radius: 10px; background: var(--sg-fill); font-family: inherit; max-height: 130px; overflow-y: auto; }
+  .scan-hint{ font-size: 11.5px; color: var(--ink-soft); text-align: center; line-height: 1.45; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -1263,6 +1297,8 @@
     </div>
 
     <form id="crm-form" class="crm-form">
+      <button type="button" id="crmScanBtn">📷 Scanner une carte de visite</button>
+      <input type="file" id="crmScanInput" accept="image/*" style="display:none;">
       
       <div style="display:flex; gap:8px;">
         <input type="text" id="crm-name" placeholder="Nom du contact" required style="flex:1;" />
@@ -1342,6 +1378,16 @@
   <div class="sg-card">
     <button type="button" class="sg-x" id="sgWeatherClose" aria-label="Fermer">✕</button>
     <div id="sgWeatherBody"></div>
+  </div>
+</div>
+
+
+<!-- ===== SUPER-GLASS : SCAN DE CARTE DE VISITE ===== -->
+<div id="sgScan" class="sg-overlay sg-center" aria-hidden="true">
+  <div class="sg-card">
+    <button type="button" class="sg-x" id="sgScanClose" aria-label="Fermer">✕</button>
+    <div class="qa-title" style="margin:0 40px 12px 0;">Carte de visite</div>
+    <div id="sgScanBody"></div>
   </div>
 </div>
 
@@ -4153,7 +4199,7 @@ function initGrowTransitions() {
   const defs = [
     ['detailSheet', 'sheet'], ['qaSheet', 'sheet'], ['settingsSheet', 'sheet'],
     ['crmPage', 'page'], ['sgWeather', 'card', '.sg-card'],
-    ['sgScreenTime', 'scroll', '.sg-scroll'], ['sgBrief', 'scroll', '.sg-scroll']
+    ['sgScreenTime', 'scroll', '.sg-scroll'], ['sgBrief', 'scroll', '.sg-scroll'], ['sgScan', 'card', '.sg-card']
   ];
 
   function stop(el) {
@@ -4291,6 +4337,316 @@ function initCrmCards() {
   scroller.addEventListener('scroll', release, { passive: true });
 }
 
+/* ---------- Scan de carte de visite : analyse du texte lu ---------- */
+function parseBusinessCard(raw) {
+  const GENERIC_MAIL = /^(gmail|googlemail|outlook|hotmail|live|msn|yahoo|ymail|icloud|me|orange|wanadoo|free|sfr|laposte|neuf|bbox|protonmail|proton|aol)$/i;
+  const TITLE_RE = /(directeur|directrice|manager|responsable|g[ée]rant|g[ée]rante|pr[ée]sident|pr[ée]sidente|\bpdg\b|\bdg\b|\bceo\b|\bcto\b|\bcfo\b|consultant|conseill(?:er|[èe]re)|commercial|charg[ée]|ing[ée]nieur|avocat|courtier|expert|fondateur|fondatrice|associ[ée]|assistant|attach[ée]|\bchef\b|\bhead\b|founder|director|\bsales\b|advisor|adviser|engineer|technicien|agent|n[ée]gociateur|coordinat|architecte|notaire|m[ée]decin|pharmacien|infirmi|kin[ée]|dentiste|comptable|formateur|coach)/i;
+  const COMPANY_RE = /\b(sas|sasu|sarl|eurl|sa|sci|snc|group|groupe|conseil|consulting|agence|cabinet|immobilier|immobili[èe]re|assurances?|banque|solutions|services|studio|institut|soci[ée]t[ée]|company|inc|ltd|llc|gmbh|laboratoires?|pharmacie|clinique|transports?|[ée]ditions|entreprise|distribution|industries|technologies|tech|digital|[ée]nergie|btp|construction|mutuelle|fondation|association)\b|&/i;
+  const ADDR_RE = /\b\d{5}\b|\b(rue|avenue|av\.?|boulevard|bd|chemin|impasse|all[ée]e|place|route|quai|cours|zone|bp|cs)\b/i;
+
+  let text = String(raw || '').replace(/\s+@\s*/g, '@').replace(/\s*@\s+/g, '@');
+  const lines = text.replace(/[|•·●▪■◆►“”"]/g, ' ').split(/\r?\n/)
+    .map(l => l.replace(/\s+/g, ' ').trim())
+    .filter(l => l.replace(/[^A-Za-zÀ-ÿ0-9@]/g, '').length >= 2);
+
+  const res = { name: '', company: '', title: '', email: '', phone: '', website: '', address: '', otherPhones: [], lines };
+  const used = new Set();
+
+  // --- e-mail ---
+  const emailRe = /[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}/;
+  lines.forEach((l, i) => {
+    const m = l.match(emailRe);
+    if (m) { if (!res.email) res.email = m[0].toLowerCase(); used.add(i); }
+  });
+
+  // --- téléphones ---
+  const phones = [];
+  const fmtNational = d => d.replace(/(\d{2})(?=\d)/g, '$1 ').trim();
+  lines.forEach((l, i) => {
+    if (used.has(i) && emailRe.test(l)) return;
+    const isFax = /fax|t[ée]l[ée]copie/i.test(l);
+    const re = /(?:\+|00)?\d(?:[\s.\-()]?\d){8,14}/g;
+    let m;
+    while ((m = re.exec(l))) {
+      let d = m[0].replace(/\D/g, '');
+      const plus = /^(\+|00)/.test(m[0]);
+      let formatted = '';
+      if (plus && /^(?:00)?33\d{9}$/.test(d)) { d = d.replace(/^00/, ''); formatted = '+33 ' + d[2] + ' ' + fmtNational(d.slice(3)); }
+      else if (/^0[1-9]\d{8}$/.test(d)) formatted = fmtNational(d);
+      else if (/^33[1-9]\d{8}$/.test(d) && plus) formatted = '+33 ' + d[2] + ' ' + fmtNational(d.slice(3));
+      else if (plus && d.length >= 9 && d.length <= 15) formatted = '+' + d.replace(/^00/, '');
+      else continue;
+      phones.push({ formatted, mobile: /^(0[67]|\+33 [67])/.test(formatted), fax: isFax, line: i });
+    }
+  });
+  const usable = phones.filter(p => !p.fax);
+  const best = usable.find(p => p.mobile) || usable[0];
+  if (best) res.phone = best.formatted;
+  res.otherPhones = phones.filter(p => p !== best && !p.fax).map(p => p.formatted);
+  phones.forEach(p => used.add(p.line));
+
+  // --- site web ---
+  lines.forEach((l, i) => {
+    if (res.website) return;
+    const noMail = l.replace(emailRe, ' ');
+    const m = noMail.match(/(?:https?:\/\/|www\.)[^\s,;]+/i) ||
+              noMail.match(/^(?:site\s*:?\s*)?([a-z0-9\-]+(?:\.[a-z0-9\-]+)*\.[a-z]{2,})(?:\/\S*)?$/i);
+    if (m) { res.website = (m[1] || m[0]).replace(/^https?:\/\//i, '').replace(/[.,;]+$/, ''); used.add(i); }
+  });
+
+  // --- adresse ---
+  const addr = [];
+  lines.forEach((l, i) => { if (!used.has(i) && ADDR_RE.test(l) && !/\d{2}[\s.]\d{2}[\s.]\d{2}/.test(l)) { addr.push(l.replace(/^adresse\s*:?\s*/i, '')); used.add(i); } });
+  res.address = addr.slice(0, 2).join(', ');
+
+  // --- fonction ---
+  let titleIdx = -1;
+  lines.forEach((l, i) => { if (titleIdx < 0 && !used.has(i) && TITLE_RE.test(l) && l.split(' ').length <= 8) titleIdx = i; });
+  if (titleIdx >= 0) { res.title = lines[titleIdx]; used.add(titleIdx); }
+
+  // --- entreprise (mots-clés) ---
+  let companyIdx = -1;
+  lines.forEach((l, i) => { if (companyIdx < 0 && !used.has(i) && COMPANY_RE.test(l)) companyIdx = i; });
+
+  // --- nom ---
+  const PARTICLE = /^(de|du|des|la|le|les|van|von|der|den|el|al|ben|bin|d['’]|di|da|dos|del)$/i;
+  const cleanName = l => l.replace(/^(m\.?|mr\.?|mme\.?|mlle\.?|dr\.?|pr\.?|me\.?|ma[îi]tre)\s+/i, '').trim();
+  const wordOk = w => PARTICLE.test(w) || /^[A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-.]*$/.test(w);
+  const isNameLike = l => {
+    const c = cleanName(l);
+    if (/\d|@/.test(c) || c.length > 40) return false;
+    const w = c.split(' ').filter(Boolean);
+    return w.length >= 2 && w.length <= 4 && w.every(wordOk) && w.some(x => !PARTICLE.test(x));
+  };
+  let nameIdx = -1, bestScore = -1;
+  lines.forEach((l, i) => {
+    if (used.has(i) || i === companyIdx || !isNameLike(l)) return;
+    const w = cleanName(l).split(' ');
+    const mixed = w.some(x => x.length > 1 && x === x.toUpperCase()) && w.some(x => /^[A-ZÀ-Ý][a-zà-ÿ]/.test(x));
+    const score = (mixed ? 3 : 0) + Math.max(0, 3 - i * 0.5) + (w.length <= 3 ? 1 : 0);
+    if (score > bestScore) { bestScore = score; nameIdx = i; }
+  });
+  const titleCase = s => s.toLowerCase().replace(/(^|[\s\-'’])([a-zà-ÿ])/g, (m, a, b) => a + b.toUpperCase());
+  const smartCase = s => s.split(' ').map(w => (w.length > 1 && w === w.toUpperCase() && !PARTICLE.test(w)) ? titleCase(w) : w).join(' ');
+  if (nameIdx >= 0) { res.name = smartCase(cleanName(lines[nameIdx])); used.add(nameIdx); }
+  else if (res.email) {
+    const loc = res.email.split('@')[0].split(/[._\-]/).filter(p => /^[a-zà-ÿ]{2,}$/i.test(p));
+    if (loc.length >= 2) res.name = loc.slice(0, 2).map(p => p[0].toUpperCase() + p.slice(1)).join(' ');
+  }
+
+  // --- fonction (repli : ligne juste sous le nom) ---
+  if (!res.title && nameIdx >= 0) {
+    const k = nameIdx + 1;
+    if (k < lines.length && !used.has(k) && k !== companyIdx && !COMPANY_RE.test(lines[k]) && lines[k].length <= 50) { res.title = lines[k]; used.add(k); }
+  }
+
+  // --- entreprise (repli) ---
+  if (companyIdx >= 0 && !used.has(companyIdx)) { res.company = lines[companyIdx]; used.add(companyIdx); }
+  if (!res.company) {
+    const k = lines.findIndex((l, i) => !used.has(i) && /[A-Za-zÀ-ÿ]{3}/.test(l) && l.length <= 45);
+    if (k >= 0) { res.company = lines[k]; used.add(k); }
+  }
+  if (!res.company) {
+    let dom = '';
+    if (res.email) { const d = res.email.split('@')[1].split('.')[0]; if (!GENERIC_MAIL.test(d)) dom = d; }
+    if (!dom && res.website) dom = res.website.replace(/^www\./i, '').split('.')[0];
+    if (dom) res.company = titleCase(dom.replace(/[\-_]/g, ' '));
+  }
+  if (res.company) {
+    const up = res.company.replace(/[^A-Za-zÀ-ÿ]/g, '');
+    if (up && up === up.toUpperCase()) res.company = res.company.split(' ').map(w => PARTICLE.test(w) ? w.toLowerCase() : (w.length <= 3 ? w : titleCase(w))).join(' ');
+    res.company = res.company.charAt(0).toUpperCase() + res.company.slice(1);
+  }
+  if (res.title) res.title = res.title.charAt(0).toUpperCase() + res.title.slice(1);
+  return res;
+}
+
+function buildCardNotes(p) {
+  const out = [];
+  if (p.title) out.push('Fonction : ' + p.title);
+  if (p.otherPhones && p.otherPhones.length) out.push('Autre tél : ' + p.otherPhones.join(', '));
+  if (p.website) out.push('Site : ' + p.website);
+  if (p.address) out.push('Adresse : ' + p.address);
+  return out.join('\n');
+}
+
+/* =====================================================
+   SCAN DE CARTE DE VISITE (photo -> fiche CRM)
+   Lecture du texte sur le téléphone avec Tesseract.js (chargé à la demande)
+   ===================================================== */
+const TESS_SRC = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+const TESS_LANG_PATH = 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/fra/4.0.0_best_int';
+let tessLoading = null;
+function loadTesseract() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (tessLoading) return tessLoading;
+  tessLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = TESS_SRC;
+    s.onload = () => window.Tesseract ? resolve(window.Tesseract) : reject(new Error('Tesseract introuvable'));
+    s.onerror = () => { tessLoading = null; reject(new Error('Chargement impossible')); };
+    setTimeout(() => { if (!window.Tesseract) { tessLoading = null; reject(new Error('Délai dépassé')); } }, 30000);
+    document.head.appendChild(s);
+  });
+  return tessLoading;
+}
+
+// Redimensionne + niveaux de gris + étirement du contraste : aide beaucoup la lecture
+function prepareCardImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const MAX = 2000;
+        const k = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const id = ctx.getImageData(0, 0, w, h), d = id.data;
+        const hist = new Uint32Array(256);
+        for (let i = 0; i < d.length; i += 4) {
+          const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
+          d[i] = d[i + 1] = d[i + 2] = g; hist[g]++;
+        }
+        const total = w * h; let acc = 0, lo = 0, hi = 255;
+        for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc >= total * 0.02) { lo = i; break; } }
+        acc = 0;
+        for (let i = 255; i >= 0; i--) { acc += hist[i]; if (acc >= total * 0.02) { hi = i; break; } }
+        if (hi - lo < 40) { lo = 0; hi = 255; }
+        const span = hi - lo;
+        for (let i = 0; i < d.length; i += 4) {
+          const v = Math.max(0, Math.min(255, ((d[i] - lo) * 255 / span) | 0));
+          d[i] = d[i + 1] = d[i + 2] = v;
+        }
+        ctx.putImageData(id, 0, 0);
+        URL.revokeObjectURL(url);
+        resolve(c);
+      } catch (e) { URL.revokeObjectURL(url); reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image illisible')); };
+    img.src = url;
+  });
+}
+
+function initCardScan() {
+  const btn = document.getElementById('crmScanBtn');
+  const input = document.getElementById('crmScanInput');
+  const ov = document.getElementById('sgScan');
+  const body = document.getElementById('sgScanBody');
+  if (!btn || !input || !ov || !body) return;
+  let currentFile = null, runId = 0, thumbUrl = '';
+
+  function closeScan() { runId++; sgClose(ov); if (thumbUrl) { URL.revokeObjectURL(thumbUrl); thumbUrl = ''; } }
+  document.getElementById('sgScanClose').addEventListener('click', closeScan);
+  ov.addEventListener('click', (e) => { if (e.target === ov) closeScan(); });
+
+  btn.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    const f = input.files && input.files[0];
+    input.value = '';
+    if (f) startScan(f);
+  });
+
+  function thumbHtml() { return thumbUrl ? `<img class="scan-thumb" src="${thumbUrl}" alt="Carte">` : ''; }
+
+  function showLoading(text, pct) {
+    body.innerHTML = `${thumbHtml()}
+      <div class="scan-status" id="scanStatus">${text}</div>
+      <div class="scan-progress"><i id="scanBar" style="width:${pct || 0}%"></i></div>
+      <div class="scan-hint">La lecture se fait sur ton téléphone. La 1re fois, un petit module se télécharge (connexion requise).</div>`;
+  }
+  function setProgress(text, pct) {
+    const s = document.getElementById('scanStatus'), b = document.getElementById('scanBar');
+    if (s) s.textContent = text;
+    if (b) b.style.width = Math.round(pct) + '%';
+  }
+
+  async function startScan(file) {
+    const my = ++runId;
+    currentFile = file;
+    if (thumbUrl) URL.revokeObjectURL(thumbUrl);
+    thumbUrl = URL.createObjectURL(file);
+    showLoading('Préparation de l\'image…', 3);
+    sgOpen(ov);
+    try {
+      const canvas = await prepareCardImage(file);
+      if (my !== runId) return;
+      setProgress('Chargement du lecteur…', 8);
+      const T = await loadTesseract();
+      if (my !== runId) return;
+      const worker = await T.createWorker('fra', 1, {
+        langPath: TESS_LANG_PATH,
+        logger: (m) => {
+          if (my !== runId || !m) return;
+          if (m.status === 'recognizing text') setProgress('Lecture de la carte…', 30 + m.progress * 68);
+          else if (/loading|initializ/i.test(m.status || '')) setProgress('Préparation du lecteur…', 10 + Math.min(20, (m.progress || 0) * 20));
+        }
+      });
+      let text = '';
+      try {
+        const r = await worker.recognize(canvas);
+        text = (r && r.data && r.data.text) || '';
+      } finally { try { await worker.terminate(); } catch(_) {} }
+      if (my !== runId) return;
+      showReview(parseBusinessCard(text), text);
+    } catch (err) {
+      if (my !== runId) return;
+      console.warn('Scan carte :', err);
+      showReview(null, '', "La lecture automatique n'a pas pu se faire (connexion nécessaire la 1re fois). Tu peux quand même joindre la photo et remplir à la main.");
+    }
+  }
+
+  function field(id, label, val, type) {
+    return `<label class="scan-field"><span>${label}</span><input type="${type || 'text'}" id="${id}" value="${escapeHtml(val || '')}"></label>`;
+  }
+
+  function showReview(p, raw, errMsg) {
+    const empty = !p || (!p.name && !p.company && !p.email && !p.phone);
+    const notes = p ? buildCardNotes(p) : '';
+    const msg = errMsg || (empty ? "Je n'ai pas réussi à lire cette carte. Essaie avec plus de lumière, à plat et bien cadrée." : 'Vérifie les infos lues, corrige si besoin :');
+    body.innerHTML = `${thumbHtml()}
+      <div class="scan-status" style="text-align:left; padding-top:0;">${msg}</div>
+      ${field('scanName', 'Nom', p && p.name)}
+      ${field('scanCompany', 'Entreprise', p && p.company)}
+      ${field('scanEmail', 'Email', p && p.email, 'email')}
+      ${field('scanPhone', 'Téléphone', p && p.phone, 'tel')}
+      <label class="scan-field"><span>Notes (fonction, site, adresse)</span><textarea id="scanNotes">${escapeHtml(notes)}</textarea></label>
+      ${raw ? `<details class="scan-raw"><summary>Voir le texte lu</summary><pre>${escapeHtml(raw)}</pre></details>` : ''}
+      <label class="scan-check"><input type="checkbox" id="scanAttach" checked> Joindre la photo à la fiche</label>
+      <div class="scan-actions">
+        <button type="button" class="ko" id="scanCancel">Annuler</button>
+        <button type="button" class="ok" id="scanUse">Remplir la fiche</button>
+      </div>`;
+    document.getElementById('scanCancel').addEventListener('click', closeScan);
+    document.getElementById('scanUse').addEventListener('click', applyScan);
+  }
+
+  function applyScan() {
+    const g = id => (document.getElementById(id) || {}).value || '';
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v.trim()) { el.value = v.trim(); el.dispatchEvent(new Event('input', { bubbles: true })); } };
+    set('crm-name', g('scanName'));
+    set('crm-company', g('scanCompany'));
+    set('crm-contact-email', g('scanEmail'));
+    set('crm-contact-phone', g('scanPhone'));
+    const notes = g('scanNotes').trim();
+    const notesEl = document.getElementById('crm-notes');
+    if (notes && notesEl) notesEl.value = notesEl.value.trim() ? notesEl.value.trim() + '\n' + notes : notes;
+    const attach = document.getElementById('scanAttach');
+    if (attach && attach.checked && currentFile && typeof compressImage === 'function') {
+      compressImage(currentFile, (base64Data) => {
+        pendingAttachments.push({ id: uid(), name: 'carte-de-visite.jpg', type: 'image', data: base64Data });
+        renderPendingAttachments();
+      });
+    }
+    closeScan();
+    const nameEl = document.getElementById('crm-name');
+    if (nameEl) { try { nameEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_) {} }
+  }
+}
+
 loadCRM();
 loadTasks();
 updateTodayHeader();
@@ -4300,6 +4656,7 @@ initScreenTime();
 initNightMode();
 initGrowTransitions();
 initCrmCards();
+initCardScan();
 updateWeatherWidget();
 maybeShowMorningBrief();
 setInterval(()=>{ renderAll(); }, 60000);
