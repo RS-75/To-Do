@@ -1105,6 +1105,158 @@
   @media (prefers-reduced-motion: reduce){
     #sgBrief .sg-cta::after, .sc-photo.scanning::after, .bf-eq i{ animation: none; }
   }
+
+  /* ============================================================
+     iOS-26 STYLE : barre flottante + grand titre + reflet gyro
+     ============================================================ */
+  :root{
+    --hl:104px;            /* hauteur de l'en-tête déployé */
+    --hs:48px;             /* hauteur de l'en-tête réduit  */
+    --p:0;                 /* progression du repli (0 → 1) */
+    --sheen:.55;           /* intensité du reflet          */
+    --tilt-on:0;
+    --hdr-bg: color-mix(in srgb, var(--bg) 78%, transparent);
+  }
+  [data-theme="dark"]{ --sheen:.10; }
+  [data-theme="glass-light"]{ --sheen:.65; --hdr-bg: rgba(255,255,255,.55); }
+  [data-theme="glass-dark"]{ --sheen:.13; --hdr-bg: rgba(10,25,47,.55); }
+  [data-theme="glass"]{ --sheen:.6; --hdr-bg: rgba(255,255,255,.4); }
+
+  /* ---------- En-tête à grand titre ---------- */
+  .wrap > header{
+    position:absolute; top:0; left:0; right:0; z-index:15;
+    height: calc(var(--hl) - (var(--hl) - var(--hs)) * var(--p));
+    padding: calc(8px * (1 - var(--p))) 16px 0;
+    align-items:center;
+  }
+  .wrap > header::before{
+    content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background: var(--card);
+    background: var(--hdr-bg);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    backdrop-filter: blur(22px) saturate(170%);
+    border-bottom: 1px solid var(--line);
+    opacity: var(--p);
+  }
+  .wrap > header > *{ position:relative; z-index:1; }
+  .wrap > header > div:first-child{ min-width:0; }
+  .wrap > header .day-name{
+    line-height:16px; max-height: calc(16px * (1 - var(--p)));
+    opacity: calc(1 - var(--p) * 1.8); overflow:hidden; white-space:nowrap;
+  }
+  .wrap > header h1{
+    font-size:34px; line-height:38px; height:38px; width:max-content;
+    white-space:nowrap; letter-spacing:-.01em;
+    transform-origin: left center;
+    transform: translateX(calc(var(--tx, 0px) * var(--p))) scale(calc(1 - .5 * var(--p)));
+    will-change: transform;
+  }
+  .wrap > header .header-actions{ transform-origin: right center; transform: scale(calc(1 - .3 * var(--p))); }
+  .wrap > header .ring-num{ opacity: calc(1 - var(--p) * 1.6); }
+
+  /* le contenu défile sous l'en-tête */
+  #panel-tasks, #panel-stats, #panel-account{ padding: var(--hl) 16px 140px 16px; }
+  #panel-today{
+    padding: var(--hl) 16px 0;
+    margin-bottom: calc((var(--hl) - var(--hs)) * -1);
+    transform: translateY(calc((var(--hl) - var(--hs)) * var(--p) * -1));
+  }
+  .timeline-scroll{ padding-bottom: 150px; }
+  #view-month, #view-year{ padding-bottom: 140px; }
+
+  /* bandeau notifications : flotte juste sous l'en-tête */
+  .notif-hint{
+    position:absolute; left:16px; right:16px; z-index:14; margin:0; padding:8px 12px; border-radius:14px;
+    top: calc(var(--hl) - (var(--hl) - var(--hs)) * var(--p) + 4px);
+    background: var(--card); background: color-mix(in srgb, var(--card) 70%, transparent);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    border:1px solid var(--line);
+  }
+
+  /* ---------- Barre d'onglets flottante en verre dépoli ---------- */
+  nav.tabbar.tabbar{
+    left:14px; right:14px; width:auto; max-width:400px; margin:0 auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding:6px; border-radius:34px; border:1px solid rgba(255,255,255,.45);
+    background: rgba(255,255,255,.45);
+    background: color-mix(in srgb, var(--card) 55%, transparent);
+    -webkit-backdrop-filter: blur(26px) saturate(190%);
+    backdrop-filter: blur(26px) saturate(190%);
+    box-shadow: 0 10px 34px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.04);
+    isolation:isolate;
+  }
+  [data-theme="dark"] nav.tabbar.tabbar, [data-theme="glass-dark"] nav.tabbar.tabbar{
+    border-color: rgba(255,255,255,.14);
+    box-shadow: 0 10px 34px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.14);
+  }
+  .tabbar .tab-btn{ position:relative; z-index:1; padding:8px 2px 7px; -webkit-tap-highlight-color:transparent; transition: color .25s; }
+  .tabbar .tab-btn svg{ transition: stroke .25s, transform .45s cubic-bezier(.3,1.6,.5,1); }
+  .tabbar .tab-btn.active svg{ transform: translateY(-1px) scale(1.08); }
+  .tabbar .tab-btn.active span{ font-weight:600; }
+
+  .tab-bubble{
+    position:absolute; z-index:0; top:6px; bottom:6px; left:0; width:0; pointer-events:none;
+    transition: transform .55s cubic-bezier(.3,1.45,.5,1), width .55s cubic-bezier(.3,1.45,.5,1);
+  }
+  .tab-bubble.no-anim{ transition:none; }
+  .tab-bubble i{
+    position:absolute; inset:0; border-radius:28px; display:block;
+    background:
+      radial-gradient(120% 90% at 30% 0%, rgba(255,255,255,.85), rgba(255,255,255,0) 60%),
+      rgba(255,255,255,.28);
+    background:
+      radial-gradient(120% 90% at 30% 0%, rgba(255,255,255,.85), rgba(255,255,255,0) 60%),
+      color-mix(in srgb, var(--accent) 20%, rgba(255,255,255,.2));
+    border:1px solid rgba(255,255,255,.7);
+    box-shadow:
+      inset 0 1px 2px rgba(255,255,255,.95),
+      inset 0 -6px 12px color-mix(in srgb, var(--accent) 16%, transparent),
+      0 0 20px color-mix(in srgb, var(--accent) 38%, transparent),
+      0 4px 12px rgba(0,0,0,.08);
+  }
+  [data-theme="dark"] .tab-bubble i, [data-theme="glass-dark"] .tab-bubble i{
+    background:
+      radial-gradient(120% 90% at 30% 0%, rgba(255,255,255,.28), rgba(255,255,255,0) 60%),
+      color-mix(in srgb, var(--accent) 24%, rgba(255,255,255,.04));
+    border-color: rgba(255,255,255,.22);
+  }
+  .tab-bubble.go i{ animation: bubbleStretch .55s cubic-bezier(.3,1.3,.5,1); }
+  @keyframes bubbleStretch{
+    0%{ transform:scale(1,1); } 35%{ transform:scale(1.22,.9); } 70%{ transform:scale(.97,1.05); } 100%{ transform:scale(1,1); }
+  }
+
+  /* boutons flottants au-dessus de la barre */
+  .quick-fab{ bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  .mic-fab{ bottom: calc(156px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ---------- Reflet qui suit l'inclinaison ---------- */
+  :root:not(#_) :is(.timeline-outer, .account-card, .stats-card, .month-grid, .month-tile, .crm-stat,
+                   .crm-card, .collapsible-header, .weather-pill, .chip, nav.tabbar){
+    background-image: radial-gradient(ellipse 85% 130% at var(--gx, 50%) var(--gy, 0%),
+      rgba(255,255,255, calc(var(--sheen) * var(--tilt-on))) 0%, rgba(255,255,255,0) 62%);
+    background-repeat:no-repeat;
+  }
+
+  /* demande d'autorisation (iPhone) */
+  .tilt-ask{
+    position:fixed; left:50%; z-index:22; transform:translateX(-50%);
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    display:none; align-items:center; gap:10px; padding:8px 8px 8px 14px; border-radius:24px;
+    font-size:12.5px; color:var(--ink); white-space:nowrap;
+    background: var(--card); background: color-mix(in srgb, var(--card) 62%, transparent);
+    -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+    border:1px solid rgba(255,255,255,.4); box-shadow:0 8px 26px rgba(0,0,0,.16);
+  }
+  .tilt-ask.show{ display:flex; }
+  .tilt-ask button{ border:none; cursor:pointer; font:600 12.5px 'Inter',sans-serif; border-radius:16px; padding:7px 13px; }
+  .tilt-ask .ok{ background:var(--accent); color:#fff; }
+  .tilt-ask .no{ background:transparent; color:var(--ink-soft); padding:7px 9px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .tab-bubble{ transition-duration:.01s; }
+    .tab-bubble.go i{ animation:none; }
+  }
+
 </style>
 </head>
 <body>
@@ -1469,6 +1621,11 @@
   </div>
 </div>
 
+<div class="tilt-ask" id="tiltAsk">
+  <span>✨ Reflet au mouvement</span>
+  <button class="ok" id="tiltYes" type="button">Activer</button>
+  <button class="no" id="tiltNo" type="button" aria-label="Plus tard">✕</button>
+</div>
 <nav class="tabbar">
   <button class="tab-btn active" data-tab="today" style="position:relative;">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
@@ -5069,6 +5226,174 @@ setInterval(()=>{ updateWeatherWidget(); }, 1800000);
 quickFab.classList.add('show');
 if(SpeechRecognition) quickMicFab.classList.add('show');
 setTimeout(scrollToNow, 200);
+
+/* ============================================================
+   iOS-26 STYLE : bulle d'onglets, grand titre, reflet gyro
+   ============================================================ */
+(function(){
+  const root = document.documentElement;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- 1. Bulle lumineuse qui glisse ---------- */
+  const nav = document.querySelector('nav.tabbar');
+  if(nav){
+    const bubble = document.createElement('div');
+    bubble.className = 'tab-bubble no-anim';
+    bubble.innerHTML = '<i></i>';
+    nav.insertBefore(bubble, nav.firstChild);
+    let lastTab = null, goTimer = null;
+    function placeBubble(animate){
+      const btn = nav.querySelector('.tab-btn.active');
+      if(!btn) return;
+      bubble.classList.toggle('no-anim', !animate);
+      bubble.style.width = btn.offsetWidth + 'px';
+      bubble.style.transform = 'translateX(' + btn.offsetLeft + 'px)';
+      if(animate && lastTab && lastTab !== btn){
+        bubble.classList.remove('go'); void bubble.offsetWidth; bubble.classList.add('go');
+        clearTimeout(goTimer); goTimer = setTimeout(()=> bubble.classList.remove('go'), 600);
+      }
+      lastTab = btn;
+    }
+    placeBubble(false);
+    new MutationObserver(()=> placeBubble(true)).observe(nav, { attributes:true, subtree:true, attributeFilter:['class'] });
+    window.addEventListener('resize', ()=> placeBubble(false));
+    if(window.ResizeObserver) new ResizeObserver(()=> placeBubble(false)).observe(nav);
+    window.addEventListener('load', ()=> placeBubble(false));
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=> placeBubble(false));
+  }
+
+  /* ---------- 2. Grand titre qui se réduit ---------- */
+  const header = document.querySelector('.wrap > header');
+  const h1 = document.getElementById('pageTitle');
+  const RANGE = 56;               // px de défilement pour replier complètement
+  let target = 0, cur = 0, raf = 0, lastKey = '';
+  const stored = {};              // dernière valeur de p par écran
+  let touching = false, momentum = false, momTimer = 0;
+
+  function clamp(v){ return Math.max(0, Math.min(1, v)); }
+  function measureTx(){
+    if(!header || !h1) return;
+    const w = h1.offsetWidth, L = h1.offsetLeft, W = header.clientWidth;
+    const tx = (W / 2) - (w * 0.25) - L;      // à p=1 le titre fait 50 % de sa largeur
+    header.style.setProperty('--tx', Math.round(tx) + 'px');
+  }
+  function apply(){
+    raf = 0;
+    const d = target - cur;
+    cur = Math.abs(d) < .002 ? target : cur + d * .35;
+    root.style.setProperty('--p', cur.toFixed(3));
+    if(cur !== target) raf = requestAnimationFrame(apply);
+  }
+  function setTarget(v){ target = clamp(v); if(!raf) raf = requestAnimationFrame(apply); }
+
+  function activeInfo(){
+    const panel = document.querySelector('.panel.active');
+    if(!panel) return null;
+    if(panel.id !== 'panel-today') return { key: panel.id, el: panel, user: false };
+    const view = ['day','month','year'].find(v => {
+      const el = document.getElementById('view-' + v);
+      return el && el.style.display !== 'none';
+    }) || 'day';
+    const el = view === 'day' ? document.getElementById('timelineScroll') : document.getElementById('view-' + view);
+    return { key: 'today-' + view, el, user: view === 'day' };
+  }
+  function sync(force){
+    const info = activeInfo();
+    if(!info) return;
+    if(!force && info.key === lastKey) return;
+    lastKey = info.key;
+    requestAnimationFrame(()=>{
+      if(info.user) setTarget(stored[info.key] || 0);      // timeline : on ignore le scroll programmatique
+      else { const p = clamp(info.el.scrollTop / RANGE); stored[info.key] = p; setTarget(p); }
+    });
+  }
+  function onScroll(e){
+    const info = activeInfo();
+    if(!info || e.target !== info.el) return;
+    if(info.user && !(touching || momentum)) return;       // scrollToNow() & co. n'ont pas d'effet
+    if(info.user){ clearTimeout(momTimer); momTimer = setTimeout(()=>{ momentum = false; }, 180); }
+    const p = clamp(info.el.scrollTop / RANGE);
+    stored[info.key] = p; setTarget(p);
+  }
+  const wrapEl = document.querySelector('.wrap');
+  if(wrapEl && header && h1){
+    wrapEl.addEventListener('scroll', onScroll, true);
+    wrapEl.addEventListener('touchstart', ()=>{ touching = true; momentum = false; }, { passive:true, capture:true });
+    const endTouch = ()=>{ touching = false; momentum = true; clearTimeout(momTimer); momTimer = setTimeout(()=>{ momentum = false; }, 1800); };
+    wrapEl.addEventListener('touchend', endTouch, { passive:true, capture:true });
+    wrapEl.addEventListener('touchcancel', endTouch, { passive:true, capture:true });
+    wrapEl.addEventListener('wheel', ()=>{ momentum = true; clearTimeout(momTimer); momTimer = setTimeout(()=>{ momentum = false; }, 250); }, { passive:true, capture:true });
+
+    const mo = new MutationObserver(()=> sync(false));
+    document.querySelectorAll('.panel').forEach(p => mo.observe(p, { attributes:true, attributeFilter:['class'] }));
+    ['day','month','year'].forEach(v => { const el = document.getElementById('view-' + v); if(el) mo.observe(el, { attributes:true, attributeFilter:['style'] }); });
+
+    new MutationObserver(measureTx).observe(h1, { childList:true, characterData:true, subtree:true });
+    window.addEventListener('resize', measureTx);
+    window.addEventListener('load', measureTx);
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(measureTx);
+    measureTx(); sync(true);
+  }
+
+  /* ---------- 3. Reflet qui suit l'inclinaison ---------- */
+  if(reduce) return;
+  const ask = document.getElementById('tiltAsk');
+  const yes = document.getElementById('tiltYes');
+  const no  = document.getElementById('tiltNo');
+  const KEY = 'tiltSheen';
+  const store = {
+    get(){ try{ return localStorage.getItem(KEY); }catch(_){ return null; } },
+    set(v){ try{ localStorage.setItem(KEY, v); }catch(_){} }
+  };
+  let gx = 50, gy = 0, tgx = 50, tgy = 0, tRaf = 0, started = false, gotEvent = false;
+  const lim = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  function tick(){
+    tRaf = 0;
+    const dx = tgx - gx, dy = tgy - gy;
+    gx += dx * .18; gy += dy * .18;
+    root.style.setProperty('--gx', gx.toFixed(1) + '%');
+    root.style.setProperty('--gy', gy.toFixed(1) + '%');
+    if(Math.abs(dx) > .1 || Math.abs(dy) > .1) tRaf = requestAnimationFrame(tick);
+  }
+  function aim(x, y){ tgx = x; tgy = y; if(!tRaf) tRaf = requestAnimationFrame(tick); }
+  function onOrient(e){
+    if(e.gamma == null || e.beta == null) return;
+    gotEvent = true;
+    root.style.setProperty('--tilt-on', '1');
+    aim(50 + lim(e.gamma / 25, -1, 1) * 70, 50 + lim((e.beta - 50) / 25, -1, 1) * 70);
+  }
+  function startMotion(){
+    if(started) return; started = true;
+    window.addEventListener('deviceorientation', onOrient, true);
+    // pas de capteur (ordinateur) : le reflet suit la souris
+    setTimeout(()=>{
+      if(gotEvent || !window.matchMedia('(pointer:fine)').matches) return;
+      root.style.setProperty('--tilt-on', '1');
+      window.addEventListener('pointermove', e => aim(e.clientX / innerWidth * 100, e.clientY / innerHeight * 100), { passive:true });
+    }, 1500);
+  }
+
+  const D = window.DeviceOrientationEvent;
+  if(!D) return;
+  if(typeof D.requestPermission === 'function'){
+    // iPhone : autorisation obligatoire, déclenchée par un appui
+    if(store.get() === 'off') return;
+    setTimeout(()=>{ if(ask) ask.classList.add('show'); }, 1800);
+    if(yes) yes.addEventListener('click', async ()=>{
+      try{
+        const r = await D.requestPermission();
+        if(r === 'granted'){ store.set('on'); startMotion(); }
+        else store.set('off');
+      }catch(_){ /* refusé ou indisponible */ }
+      ask.classList.remove('show');
+    });
+    if(no) no.addEventListener('click', ()=>{ store.set('off'); ask.classList.remove('show'); });
+  } else {
+    startMotion();
+  }
+})();
+
 </script>
 </body>
 </html>
