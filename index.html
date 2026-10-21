@@ -586,6 +586,20 @@
     padding-bottom: max(100px, env(safe-area-inset-bottom));
   }
 
+  .note-card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:13px 14px; margin-bottom:10px; cursor:pointer; }
+  .note-card.pinned{ border-color:var(--accent); }
+  .note-card .nt{ font-weight:600; font-size:15px; color:var(--ink); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .note-card .np{ font-size:13px; color:var(--ink-soft); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .note-card .nd{ font-size:11px; color:var(--ink-faint); margin-top:7px; }
+  .notes-empty{ text-align:center; color:var(--ink-soft); font-size:14px; padding:40px 10px; line-height:1.6; }
+  #noteEditView{ display:none; flex-direction:column; }
+  #noteEditView.show{ display:flex; }
+  .note-meta{ font-size:12px; color:var(--ink-faint); margin-bottom:10px; }
+  .note-text{ width:100%; flex:1; min-height:55vh; border:none; background:transparent; color:var(--ink); font-size:17px; line-height:1.55; resize:none; outline:none; font-family:inherit; padding:0; }
+  .note-hbtns{ display:flex; gap:18px; align-items:center; }
+  .note-hbtns button{ font-size:20px !important; }
+  #noteMicBtn.listening{ animation: notePulse 1s infinite; }
+  @keyframes notePulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
   .crm-dashboard { display:flex; gap:10px; margin-bottom: 20px; }
   .crm-stat { flex:1; background:var(--card-soft); border-radius:10px; padding:12px 8px; text-align:center; display:flex; flex-direction:column; border:1px solid var(--line); }
   .crm-stat span { font-size:10px; color:var(--ink-soft); text-transform:uppercase; font-weight:600; margin-bottom:4px; }
@@ -1409,6 +1423,15 @@
       <span style="color:var(--ink-faint); font-size: 20px; line-height: 1;">›</span>
     </button>
 
+    <!-- BOUTON NOTES -->
+    <button class="modern-toggle" id="openNotesBtn" style="margin-top: 10px; width: 100%; padding: 16px;">
+      <span style="display:flex; align-items:center; gap:10px; font-size: 15px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="14" y2="17"></line></svg>
+        Notes
+      </span>
+      <span style="color:var(--ink-faint); font-size: 20px; line-height: 1;">›</span>
+    </button>
+
     <!-- TEMPS D'ÉCRAN + BRIEFING -->
     <button class="modern-toggle" id="openScreenTimeBtn" style="margin-top: 10px; width: 100%; padding: 16px;">
       <span style="display:flex; align-items:center; gap:10px; font-size: 15px;">
@@ -1655,6 +1678,31 @@
     <span>Compte</span>
   </button>
 </nav>
+
+<!-- PAGE NOTES -->
+<div id="notesPage" class="full-page-overlay">
+  <div class="crm-header" id="notesListHeader">
+    <button id="closeNotesBtn" type="button" class="btn-ghost" style="border:none; padding:8px;">‹ Retour</button>
+    <h2>Notes</h2>
+    <button id="newNoteBtn" type="button" aria-label="Nouvelle note" style="font-size:30px !important; line-height:1; padding:0 8px;">+</button>
+  </div>
+  <div class="crm-content" id="notesListView">
+    <input type="text" id="notesSearch" placeholder="🔍 Rechercher dans les notes..." autocomplete="off" style="margin-bottom:14px;">
+    <div id="notesList"></div>
+  </div>
+  <div class="crm-header" id="noteEditHeader" style="display:none;">
+    <button id="noteBackBtn" type="button" class="btn-ghost" style="border:none; padding:8px;">‹ Notes</button>
+    <div class="note-hbtns">
+      <button id="noteMicBtn" type="button" aria-label="Dicter">🎙️</button>
+      <button id="notePinBtn" type="button" aria-label="Épingler">📌</button>
+      <button id="noteDelBtn" type="button" aria-label="Supprimer">🗑️</button>
+    </div>
+  </div>
+  <div class="crm-content" id="noteEditView">
+    <div class="note-meta" id="noteMeta"></div>
+    <textarea id="noteText" class="note-text" placeholder="Écris ta note..."></textarea>
+  </div>
+</div>
 
 <!-- NOUVELLE PAGE PLEIN ÉCRAN: TRACK RECORD CRM -->
 <div id="crmPage" class="full-page-overlay">
@@ -5706,6 +5754,140 @@ setTimeout(scrollToNow, 200);
   }
 })();
 
+</script>
+<script>
+/* --- NOTES (indépendantes du Track Record) --- */
+(function(){
+  const KEY = 'journee_notes_v1';
+  let notes = [];
+  try { notes = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e) { notes = []; }
+  if(!Array.isArray(notes)) notes = [];
+  let curId = null, saveTimer = null, rec = null, listening = false;
+
+  const $ = id => document.getElementById(id);
+  const page = $('notesPage'), listView = $('notesListView'), listHeader = $('notesListHeader');
+  const editView = $('noteEditView'), editHeader = $('noteEditHeader');
+  const listEl = $('notesList'), searchEl = $('notesSearch'), ta = $('noteText');
+  const metaEl = $('noteMeta'), pinBtn = $('notePinBtn'), micBtn = $('noteMicBtn');
+  if(!page) return;
+
+  function persist(){ try { localStorage.setItem(KEY, JSON.stringify(notes)); } catch(e) {} }
+  function flush(){ if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; } persist(); }
+  function esc(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function norm(s){ return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  function lines(n){ return (n.text || '').split('\n').map(x => x.trim()).filter(Boolean); }
+  function titleOf(n){ const l = lines(n); return l.length ? l[0] : 'Note vide'; }
+  function previewOf(n){ return lines(n).slice(1).join(' '); }
+  function fmt(ts){
+    const d = new Date(ts), now = new Date();
+    const hm = d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    if(d.toDateString() === now.toDateString()) return "Aujourd'hui " + hm;
+    return d.toLocaleDateString('fr-FR', { day:'numeric', month:'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' }) + ' · ' + hm;
+  }
+
+  function renderList(){
+    const q = norm(searchEl.value.trim());
+    const items = notes
+      .filter(n => !q || norm(n.text).includes(q))
+      .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt - a.updatedAt);
+    if(!items.length){
+      listEl.innerHTML = '<div class="notes-empty">' + (q ? 'Aucune note ne correspond.' : 'Aucune note pour le moment.<br>Touche + pour en créer une.') + '</div>';
+      return;
+    }
+    listEl.innerHTML = items.map(n => `
+      <div class="note-card ${n.pinned ? 'pinned' : ''}" data-id="${n.id}">
+        <div class="nt">${n.pinned ? '📌 ' : ''}${esc(titleOf(n))}</div>
+        ${previewOf(n) ? `<div class="np">${esc(previewOf(n))}</div>` : ''}
+        <div class="nd">${fmt(n.updatedAt)}</div>
+      </div>`).join('');
+  }
+
+  function stopMic(){ if(rec && listening){ try { rec.stop(); } catch(e) {} } listening = false; micBtn.classList.remove('listening'); }
+
+  function showList(){
+    stopMic(); flush();
+    const n = notes.find(x => x.id === curId);
+    if(n && !n.text.trim()){ notes = notes.filter(x => x.id !== curId); persist(); }
+    curId = null;
+    editView.classList.remove('show'); editHeader.style.display = 'none';
+    listView.style.display = ''; listHeader.style.display = '';
+    renderList();
+  }
+
+  function openEditor(id){
+    const n = notes.find(x => x.id === id);
+    if(!n) return;
+    curId = id;
+    ta.value = n.text;
+    metaEl.textContent = 'Modifiée le ' + fmt(n.updatedAt);
+    pinBtn.style.opacity = n.pinned ? '1' : '.4';
+    listView.style.display = 'none'; listHeader.style.display = 'none';
+    editHeader.style.display = ''; editView.classList.add('show');
+  }
+
+  ta.addEventListener('input', () => {
+    const n = notes.find(x => x.id === curId);
+    if(!n) return;
+    n.text = ta.value; n.updatedAt = Date.now();
+    metaEl.textContent = 'Modifiée le ' + fmt(n.updatedAt);
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 300);
+  });
+
+  $('openNotesBtn').addEventListener('click', () => { searchEl.value = ''; showList(); page.classList.add('open'); });
+  $('closeNotesBtn').addEventListener('click', () => { flush(); page.classList.remove('open'); });
+  $('noteBackBtn').addEventListener('click', showList);
+  searchEl.addEventListener('input', renderList);
+  listEl.addEventListener('click', e => {
+    const c = e.target.closest('.note-card');
+    if(c) openEditor(c.dataset.id);
+  });
+  $('newNoteBtn').addEventListener('click', () => {
+    const now = Date.now();
+    const n = { id: 'n' + now + Math.random().toString(36).slice(2, 7), text: '', pinned: false, createdAt: now, updatedAt: now };
+    notes.push(n);
+    openEditor(n.id);
+    setTimeout(() => ta.focus(), 120);
+  });
+  pinBtn.addEventListener('click', () => {
+    const n = notes.find(x => x.id === curId);
+    if(!n) return;
+    n.pinned = !n.pinned;
+    pinBtn.style.opacity = n.pinned ? '1' : '.4';
+    flush();
+  });
+  $('noteDelBtn').addEventListener('click', () => {
+    if(!confirm('Supprimer cette note ?')) return;
+    notes = notes.filter(x => x.id !== curId);
+    curId = null; persist(); showList();
+  });
+
+  // Dictée vocale
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ micBtn.style.display = 'none'; }
+  else {
+    micBtn.addEventListener('click', () => {
+      if(listening){ stopMic(); return; }
+      rec = new SR();
+      rec.lang = 'fr-FR'; rec.continuous = true; rec.interimResults = false;
+      rec.onresult = ev => {
+        for(let i = ev.resultIndex; i < ev.results.length; i++){
+          if(!ev.results[i].isFinal) continue;
+          const t = ev.results[i][0].transcript.trim();
+          if(!t) continue;
+          ta.value += (ta.value && !/\s$/.test(ta.value) ? ' ' : '') + t;
+          ta.dispatchEvent(new Event('input'));
+        }
+      };
+      rec.onerror = () => { listening = false; micBtn.classList.remove('listening'); };
+      rec.onend = () => { listening = false; micBtn.classList.remove('listening'); };
+      try { rec.start(); listening = true; micBtn.classList.add('listening'); } catch(e) {}
+    });
+  }
+
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => { if(document.hidden) flush(); });
+})();
 </script>
 </body>
 </html>
