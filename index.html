@@ -457,6 +457,10 @@
   .modern-toggle input[type="checkbox"]:checked + .switch-track .switch-thumb { transform: translateX(18px); }
 
   .account-note{ font-size:12px; color:var(--ink-soft); line-height:1.5; text-align:center; padding:0 8px; }
+  .contact-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+  .contact-chip{border:1px solid var(--line);background:var(--card-soft);color:var(--ink);padding:7px 12px;border-radius:999px;font-size:13px;cursor:pointer;font-family:inherit;}
+  .contact-chip.selected{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .contact-chips-empty{font-size:12px;color:var(--ink-soft);}
   .meet-error{ font-size:12.5px; color:var(--rust); text-align:center; margin-top:10px; }
 
   input[type=text], input[type=email], input[type=tel], input[type=datetime-local], select, textarea{
@@ -1520,7 +1524,7 @@
 
 <div class="qa-backdrop" id="qaBackdrop"></div>
 <div class="qa-sheet" id="qaSheet">
-  <div class="qa-title">Ajout rapide</div>
+  <div class="qa-title" id="qaSheetTitle">Ajout rapide</div>
   <form id="qaForm">
     <input type="text" id="qaTaskInput" placeholder="Que faut-il faire ?" autocomplete="off">
     <textarea id="qaDescInput" placeholder="Description (optionnel)" rows="2"></textarea>
@@ -1574,8 +1578,9 @@
     </label>
 
     <div id="qaMeetFields" style="display:none; width: 100%;">
-      <input type="email" id="qaMeetEmailInput" list="contactsDatalist" placeholder="Email de l'invité" autocomplete="off" style="width:100%;">
-      <datalist id="contactsDatalist"></datalist>
+      <div class="section-title" style="margin:12px 0 0;">Invités (touche pour choisir)</div>
+      <div id="qaContactChips" class="contact-chips"></div>
+      <input type="email" id="qaMeetEmailInput" placeholder="Ou saisir un autre email puis Entrée" autocomplete="off" style="width:100%;">
     </div>
     <div class="meet-error" id="qaMeetError" style="display:none;"></div>
     <div class="qa-actions">
@@ -1617,6 +1622,7 @@
 
   <div class="detail-actions">
     <button type="button" class="btn btn-ghost" id="detailDeleteBtn">Supprimer</button>
+    <button type="button" class="btn btn-ghost" id="detailEditBtn">Modifier</button>
     <button type="button" class="btn btn-primary" id="detailCloseBtn">Fermer</button>
   </div>
 </div>
@@ -2460,6 +2466,7 @@ function saveContacts() {
 }
 
 function renderContacts() {
+  try{ renderQaChips(); }catch(e){}
   const datalist = document.getElementById('contactsDatalist');
   if(datalist) {
     datalist.innerHTML = contacts.map(c => `<option value="${c.email}">${escapeHtml(c.name)}</option>`).join('');
@@ -2726,6 +2733,7 @@ async function fetchGoogleEventsRange(timeMinIso, timeMaxIso){
       start: e.start.dateTime,
       end: e.end && e.end.dateTime,
       htmlLink: e.htmlLink,
+      attendees: (e.attendees || []).filter(a => !a.self && a.email).map(a => a.email),
       meetLink: (e.conferenceData && e.conferenceData.entryPoints && e.conferenceData.entryPoints.find(p=>p.entryPointType==='video')?.uri) || e.hangoutLink || null
     }));
 }
@@ -2752,6 +2760,7 @@ async function importGoogleEventsToTasks(events) {
         done: false,
         createdAt: Date.now(),
         meetLink: ev.meetLink || ev.htmlLink,
+        attendees: ev.attendees || [],
         gcalEventId: ev.id
       };
       tasks.push(newTask);
@@ -3480,6 +3489,106 @@ detailDeleteBtn.addEventListener('click', async ()=>{
   closeTaskDetail();
 });
 
+var qaEditingId = null;
+var qaSelectedEmails = new Set();
+const qaSheetTitle = document.getElementById('qaSheetTitle');
+const detailEditBtn = document.getElementById('detailEditBtn');
+
+function renderQaChips(){
+  const wrap = document.getElementById('qaContactChips');
+  if(!wrap || !qaSelectedEmails) return;
+  wrap.innerHTML = '';
+  const known = new Set((contacts || []).map(c => c.email.toLowerCase()));
+  const items = (contacts || []).map(c => ({ email: c.email, label: c.name }));
+  qaSelectedEmails.forEach(em => { if(!known.has(em.toLowerCase())) items.push({ email: em, label: em }); });
+  if(items.length === 0){
+    const n = document.createElement('div');
+    n.className = 'contact-chips-empty';
+    n.textContent = 'Aucun contact. Ajoute-en dans Compte > Contacts rapides.';
+    wrap.appendChild(n);
+    return;
+  }
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'contact-chip' + (qaSelectedEmails.has(it.email) ? ' selected' : '');
+    b.textContent = (qaSelectedEmails.has(it.email) ? '✓ ' : '') + it.label;
+    b.title = it.email;
+    b.addEventListener('click', () => {
+      if(qaSelectedEmails.has(it.email)) qaSelectedEmails.delete(it.email);
+      else qaSelectedEmails.add(it.email);
+      renderQaChips();
+    });
+    wrap.appendChild(b);
+  });
+}
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function addTypedInvite(){
+  const v = qaMeetEmailInput.value.trim();
+  if(!v) return true;
+  if(!EMAIL_RE.test(v)) return false;
+  qaSelectedEmails.add(v);
+  qaMeetEmailInput.value = '';
+  renderQaChips();
+  return true;
+}
+qaMeetEmailInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter' || e.key === ','){
+    e.preventDefault();
+    if(!addTypedInvite()){
+      qaMeetError.textContent = 'Email invalide.';
+      qaMeetError.style.display = 'block';
+    }
+  }
+});
+
+function toLocalInputValue(iso){
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function ensureSelectOption(sel, value, label){
+  if(![...sel.options].some(o => o.value === String(value))){
+    const o = document.createElement('option');
+    o.value = String(value); o.textContent = label;
+    sel.appendChild(o);
+  }
+}
+function openEditTask(id){
+  const t = tasks.find(x => x.id === id);
+  if(!t) return;
+  qaEditingId = id;
+  qaSheetTitle.textContent = "Modifier l'événement";
+  qaSubmitBtn.textContent = 'Enregistrer';
+  qaTaskInput.value = t.text || '';
+  qaDescInput.value = t.description || '';
+  const radio = document.querySelector(`input[name="qaColor"][value="${t.color || 'default'}"]`) || document.querySelector('input[name="qaColor"][value="default"]');
+  radio.checked = true;
+  qaDateInput.value = t.due ? toLocalInputValue(t.due) : '';
+  const dur = t.duration || 30;
+  ensureSelectOption(qaDurationSelect, dur, dur + ' min');
+  qaDurationSelect.value = String(dur);
+  qaRepeatSelect.value = t.repeat || 'none';
+  const rb = t.remindBefore || 0;
+  ensureSelectOption(qaRemindSelect, rb, rb + ' min avant');
+  qaRemindSelect.value = String(rb);
+  const meet = hasMeetLink(t);
+  qaMeetCheckbox.checked = meet;
+  qaMeetFields.style.display = meet ? 'block' : 'none';
+  qaSelectedEmails = new Set(t.attendees || []);
+  qaMeetEmailInput.value = '';
+  qaMeetError.style.display = 'none';
+  renderQaChips();
+  qaSubmitBtn.disabled = qaTaskInput.value.trim().length === 0;
+  qaBackdrop.classList.add('open');
+  qaSheet.classList.add('open');
+}
+detailEditBtn.addEventListener('click', () => {
+  const id = detailTaskId;
+  closeTaskDetail();
+  openEditTask(id);
+});
+
 function openQuickAdd(){
   qaBackdrop.classList.add('open');
   qaSheet.classList.add('open');
@@ -3509,6 +3618,11 @@ function closeQuickAdd(){
   qaMeetFields.style.display = 'none';
   qaMeetEmailInput.value = '';
   qaMeetError.style.display = 'none';
+  qaEditingId = null;
+  qaSelectedEmails = new Set();
+  qaSheetTitle.textContent = 'Ajout rapide';
+  qaSubmitBtn.textContent = 'Ajouter';
+  renderQaChips();
 }
 quickFab.addEventListener('click', openQuickAdd);
 qaCancelBtn.addEventListener('click', closeQuickAdd);
@@ -3523,7 +3637,12 @@ qaForm.addEventListener('submit', async (e)=>{
   qaMeetError.style.display = 'none';
 
   const wantsMeet = qaMeetCheckbox.checked;
-  const email = qaMeetEmailInput.value.trim();
+  if(wantsMeet && !addTypedInvite()){
+    qaMeetError.textContent = 'Email invalide.';
+    qaMeetError.style.display = 'block';
+    return;
+  }
+  const emails = wantsMeet ? [...qaSelectedEmails] : [];
   if(wantsMeet && !qaDateInput.value){
     qaMeetError.textContent = 'Choisis une heure pour créer la visioconférence.';
     qaMeetError.style.display = 'block';
@@ -3533,6 +3652,58 @@ qaForm.addEventListener('submit', async (e)=>{
   const duration = parseInt(qaDurationSelect.value, 10) || 30;
   const repeat = qaRepeatSelect.value;
   const color = document.querySelector('input[name="qaColor"]:checked').value;
+
+  if(qaEditingId){
+    const t = tasks.find(x => x.id === qaEditingId);
+    if(!t){ closeQuickAdd(); return; }
+    const prevAttendees = t.attendees || [];
+    t.text = text;
+    t.description = qaDescInput.value.trim() || null;
+    t.due = qaDateInput.value ? new Date(qaDateInput.value).toISOString() : null;
+    t.duration = qaDateInput.value ? duration : null;
+    t.repeat = repeat;
+    t.remindBefore = parseInt(qaRemindSelect.value, 10) || 0;
+    t.color = color;
+    t.attendees = emails;
+    renderAll();
+    await saveTask(t);
+    qaSubmitBtn.disabled = true;
+    qaSubmitBtn.textContent = 'Enregistrement…';
+    try{
+      if(t.gcalEventId){
+        if(!t.due){
+          await deleteGoogleEvent(t.gcalEventId);
+          t.gcalEventId = null;
+          t.meetLink = null;
+        } else {
+          const touch = emails.length > 0 || prevAttendees.length > 0;
+          const r = await updateGoogleEvent(t, wantsMeet, touch);
+          t.meetLink = r.meetLink;
+        }
+      } else if(t.due){
+        if(wantsMeet){
+          const r = await createGoogleMeetEvent(t.text, t.due, emails, t.id, t.remindBefore, t.duration);
+          t.gcalEventId = r.gcalEventId;
+          t.meetLink = r.meetLink;
+        } else {
+          syncTaskReminder(t);
+        }
+      }
+      await saveTask(t);
+      renderAll();
+    }catch(err){
+      console.error(err);
+      qaMeetError.textContent = "Modifié ici, mais Google Calendar a échoué : " + err.message;
+      qaMeetError.style.display = 'block';
+      qaSubmitBtn.textContent = 'Enregistrer';
+      qaSubmitBtn.disabled = false;
+      return;
+    }
+    cancelPushReminder(t.id);
+    if(t.due && !t.done) schedulePushReminder(t);
+    closeQuickAdd();
+    return;
+  }
 
   const t = {
     id: uid(),
@@ -3547,6 +3718,7 @@ qaForm.addEventListener('submit', async (e)=>{
     done: false,
     createdAt: Date.now(),
     meetLink: null,
+    attendees: emails,
     gcalEventId: null
   };
   tasks.push(t);
@@ -3559,7 +3731,7 @@ qaForm.addEventListener('submit', async (e)=>{
     qaSubmitBtn.disabled = true;
     qaSubmitBtn.textContent = 'Création du Meet…';
     try{
-      const result = await createGoogleMeetEvent(t.text, t.due, email, t.id, t.remindBefore, t.duration);
+      const result = await createGoogleMeetEvent(t.text, t.due, emails, t.id, t.remindBefore, t.duration);
       t.meetLink = result.meetLink;
       t.gcalEventId = result.gcalEventId;
       await saveTask(t);
@@ -3746,7 +3918,7 @@ async function createGoogleMeetEvent(taskText, dueIso, attendeeEmail, requestId,
     summary: taskText,
     start: { dateTime: start.toISOString(), timeZone: tz },
     end: { dateTime: end.toISOString(), timeZone: tz },
-    attendees: attendeeEmail ? [{ email: attendeeEmail }] : [],
+    attendees: (Array.isArray(attendeeEmail) ? attendeeEmail : (attendeeEmail ? [attendeeEmail] : [])).map(email => ({ email })),
     reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: remindBefore || 0 }] },
     conferenceData: {
       createRequest: {
@@ -3775,6 +3947,43 @@ async function createGoogleMeetEvent(taskText, dueIso, attendeeEmail, requestId,
     gcalEventId: data.id,
     meetLink: (videoEntry && videoEntry.uri) || data.hangoutLink || null
   };
+}
+
+function hasMeetLink(t){ return !!(t && t.meetLink && /meet\.google\.com/.test(t.meetLink)); }
+
+async function updateGoogleEvent(t, wantsMeet, touchAttendees){
+  const token = await ensureGoogleToken();
+  const start = new Date(t.due);
+  const end = new Date(start.getTime() + (t.duration || 30) * 60000);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const had = hasMeetLink(t);
+  const body = {
+    summary: t.text,
+    description: t.description || '',
+    start: { dateTime: start.toISOString(), timeZone: tz },
+    end: { dateTime: end.toISOString(), timeZone: tz },
+    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: t.remindBefore || 0 }] }
+  };
+  if(touchAttendees) body.attendees = (t.attendees || []).map(email => ({ email }));
+  if(wantsMeet && !had) body.conferenceData = { createRequest: { requestId: uid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } };
+  if(!wantsMeet && had) body.conferenceData = null;
+
+  const res = await fetch(
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events/' + t.gcalEventId + '?conferenceDataVersion=1&sendUpdates=all',
+    {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }
+  );
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    throw new Error((err.error && err.error.message) || 'Erreur Google Calendar (' + res.status + ')');
+  }
+  const data = await res.json();
+  if(!wantsMeet) return { meetLink: had ? null : t.meetLink };
+  const videoEntry = (data.conferenceData && data.conferenceData.entryPoints || []).find(e => e.entryPointType === 'video');
+  return { meetLink: (videoEntry && videoEntry.uri) || data.hangoutLink || t.meetLink || null };
 }
 
 async function deleteGoogleEvent(gcalEventId){
