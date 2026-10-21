@@ -457,6 +457,9 @@
   .modern-toggle input[type="checkbox"]:checked + .switch-track .switch-thumb { transform: translateX(18px); }
 
   .account-note{ font-size:12px; color:var(--ink-soft); line-height:1.5; text-align:center; padding:0 8px; }
+  .ev-ic{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;background:var(--ic-bg);box-shadow:inset 0 0 0 1px var(--ic-bd);}
+  .agenda-item .ev-ic{width:30px;height:30px;font-size:15px;}
+  .detail-header .ev-ic{width:34px;height:34px;font-size:18px;}
   .contact-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
   .contact-chip{border:1px solid var(--line);background:var(--card-soft);color:var(--ink);padding:7px 12px;border-radius:999px;font-size:13px;cursor:pointer;font-family:inherit;}
   .contact-chip.selected{background:var(--accent);color:#fff;border-color:var(--accent);}
@@ -1594,6 +1597,7 @@
 <div class="qa-sheet detail-sheet" id="detailSheet">
   <div class="detail-header">
     <button class="detail-check" id="detailCheck"></button>
+    <span id="detailIconWrap"></span>
     <div class="detail-title" id="detailTitle"></div>
   </div>
   <div class="detail-row" id="detailWhenRow" style="display:none;">
@@ -1905,6 +1909,42 @@ const START_HOUR = 6;
 const END_HOUR = 23;
 const ROW_H = 56;
 
+const EVENT_ICONS = [
+  { e:'🎥', c:'#3B82F6', k:['visio','visioconference','meet','zoom','teams','webinaire','webinar','skype','videoconference'] },
+  { e:'📞', c:'#10B981', k:['appel','appeler','rappeler','telephone','tel','call','phoning'] },
+  { e:'🍽️', c:'#F59E0B', k:['dejeuner','diner','souper','restaurant','resto','repas','brunch','cafe','apero','manger','petitdej','gouter'] },
+  { e:'💊', c:'#EF4444', k:['medecin','docteur','dentiste','pharmacie','kine','kinesitherapeute','hopital','analyse','analyses','vaccin','ophtalmo','sante','medicament','medicaments','infirmier','radio','dermato','psy','consultation'] },
+  { e:'✈️', c:'#0EA5E9', k:['vol','avion','aeroport','train','gare','voyage','hotel','vacances','valise','sncf','billet','embarquement'] },
+  { e:'🏃', c:'#22C55E', k:['sport','salle','gym','running','footing','yoga','foot','tennis','natation','muscu','velo','piscine','entrainement','randonnee','boxe'] },
+  { e:'🛒', c:'#EC4899', k:['courses','course','supermarche','acheter','achat','achats','magasin','shopping','marche'] },
+  { e:'🎂', c:'#A855F7', k:['anniversaire','fete','soiree','mariage','cadeau','bapteme','fiancailles','concert','cinema','sortie'] },
+  { e:'📚', c:'#8B5CF6', k:['cours','ecole','examen','devoir','devoirs','revision','revisions','etudes','formation','universite','fac','lecture'] },
+  { e:'💼', c:'#6366F1', k:['reunion','meeting','brief','entretien','presentation','client','projet','rdv','rendezvous','prospect','demo','devis','contrat'] },
+  { e:'📄', c:'#64748B', k:['impots','banque','facture','factures','paiement','assurance','administratif','mairie','paperasse','loyer','document','documents','dossier','prefecture','poste','courrier'] },
+  { e:'🚗', c:'#78716C', k:['voiture','garage','vidange','essence','permis','pneus','carrosserie'] },
+  { e:'🏠', c:'#D97706', k:['menage','lessive','vaisselle','ranger','jardin','bricolage','plombier','electricien','travaux','demenagement'] },
+  { e:'💈', c:'#DB2777', k:['coiffeur','barbier','manucure','massage','spa','esthetique','epilation'] }
+];
+const EVENT_ICON_DEFAULT = { e:'📌', c:'#94A3B8' };
+function normalizeWords(str){
+  return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean);
+}
+function eventIconFor(t){
+  const words = normalizeWords((t.text || '') + ' ' + (t.description || ''));
+  const joined = words.join('');
+  for(const cat of EVENT_ICONS){
+    for(const kw of cat.k){
+      if(words.includes(kw) || (kw.length >= 5 && words.some(w => w.startsWith(kw))) || (kw === 'petitdej' && joined.includes('petitdej'))) return cat;
+    }
+  }
+  if(typeof hasMeetLink === 'function' && hasMeetLink(t)) return EVENT_ICONS[0];
+  return EVENT_ICON_DEFAULT;
+}
+function eventIconHtml(t){
+  const ic = eventIconFor(t);
+  return `<span class="ev-ic" style="--ic-bg:${ic.c}26; --ic-bd:${ic.c}55;">${ic.e}</span>`;
+}
+
 const COLORS = {
   default: 'var(--accent)',
   red: '#E74C3C',
@@ -2103,16 +2143,57 @@ function paintWeatherPill() {
   weatherPill.style.display = 'flex';
 }
 
+const GEO_KEY = 'geo_last_v1';
+function loadCachedPos() {
+  try {
+    const o = JSON.parse(localStorage.getItem(GEO_KEY) || 'null');
+    if (o && typeof o.lat === 'number' && typeof o.lon === 'number') return o;
+  } catch(e) {}
+  return null;
+}
+function saveCachedPos(lat, lon) {
+  try { localStorage.setItem(GEO_KEY, JSON.stringify({ lat, lon, ts: Date.now() })); } catch(e) {}
+}
+async function geoPermissionState() {
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      const r = await navigator.permissions.query({ name: 'geolocation' });
+      return r.state; // 'granted' | 'prompt' | 'denied'
+    }
+  } catch(e) {}
+  return 'unknown';
+}
 function getPosition() {
   return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, maximumAge: 300000 });
+    navigator.geolocation.getCurrentPosition(pos => {
+      saveCachedPos(pos.coords.latitude, pos.coords.longitude);
+      resolve(pos);
+    }, reject, { timeout: 10000, maximumAge: 600000 });
   });
 }
+// Ne redemande jamais l'autorisation si on a déjà une position mémorisée
+async function resolvePosition(userInitiated) {
+  const cached = loadCachedPos();
+  const asPos = c => ({ coords: { latitude: c.lat, longitude: c.lon } });
+  const state = await geoPermissionState();
+  if (state === 'denied') {
+    if (cached) return asPos(cached);
+    throw new Error('Localisation refusée');
+  }
+  if (state === 'granted') {
+    try { return await getPosition(); }
+    catch(e) { if (cached) return asPos(cached); throw e; }
+  }
+  // 'prompt' ou 'unknown' : on évite de redéclencher la popup
+  const fresh = cached && (Date.now() - cached.ts) < 7 * 24 * 3600 * 1000;
+  if (userInitiated || !fresh) return await getPosition();
+  return asPos(cached);
+}
 
-async function updateWeatherWidget() {
+async function updateWeatherWidget(userInitiated) {
   if (!('geolocation' in navigator)) return false;
   try {
-    const pos = await getPosition();
+    const pos = await resolvePosition(userInitiated === true);
     const w = await fetchWeatherForLocation(pos.coords.latitude, pos.coords.longitude);
     if (!w) return false;
     const city = await fetchCityName(pos.coords.latitude, pos.coords.longitude);
@@ -2203,7 +2284,7 @@ sgWeatherBody.addEventListener('click', async (e) => {
   if (!btn) return;
   btn.textContent = '↻ Actualisation…';
   btn.disabled = true;
-  await updateWeatherWidget();
+  await updateWeatherWidget(true);
   renderWeatherDetail();
 });
 paintWeatherPill();
@@ -3134,6 +3215,7 @@ function renderTimeline(){
     card.draggable = true;
     card.innerHTML = `
       <button class="task-check ${t.done?'done':''}" data-action="toggle" data-id="${t.id}"></button>
+      ${eventIconHtml(t)}
       <div class="task-info">
         <div class="task-title ${t.done?'done':''}">${escapeHtml(t.text)}${subBadge}</div>
         <div class="task-time">${timeStr}${late?' · en retard':''}${t.meetLink ? ` · <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥</a>` : ''}</div>
@@ -3242,7 +3324,7 @@ function renderUpcoming(){
         }
         return `
         <li class="agenda-item task-row" data-id="${t.id}" style="--task-c: ${COLORS[t.color] || 'var(--accent)'};">
-          <span class="dot"></span>
+          ${eventIconHtml(t)}
           <span class="txt">${escapeHtml(t.text)}${subBadge}${t.meetLink ? ` <a href="${t.meetLink}" target="_blank" rel="noopener" class="meet-link">🎥</a>` : ''}</span>
           <span class="when">${timeStr}</span>
           <button class="del" data-action="delete" data-id="${t.id}">×</button>
@@ -3420,6 +3502,7 @@ function openTaskDetail(id){
   detailTaskId = id;
 
   detailTitle.textContent = t.text;
+  document.getElementById('detailIconWrap').innerHTML = eventIconHtml(t);
   detailTitle.classList.toggle('done', t.done);
   detailCheck.classList.toggle('done', t.done);
 
@@ -5588,6 +5671,26 @@ setTimeout(scrollToNow, 200);
   if(typeof D.requestPermission === 'function'){
     // iPhone : autorisation obligatoire, déclenchée par un appui
     if(store.get() === 'off') return;
+    if(store.get() === 'on'){
+      // déjà accepté une fois : plus de bannière, on réactive en silence
+      startMotion();
+      setTimeout(()=>{
+        if(gotEvent) return;
+        // iOS demande parfois de reconfirmer : au premier appui, sans rien afficher de plus
+        const once = async ()=>{
+          document.removeEventListener('click', once, true);
+          try{
+            const r = await D.requestPermission();
+            if(r === 'granted'){
+              window.removeEventListener('deviceorientation', onOrient, true);
+              started = false; startMotion();
+            } else store.set('off');
+          }catch(_){}
+        };
+        document.addEventListener('click', once, true);
+      }, 1500);
+      return;
+    }
     setTimeout(()=>{ if(ask) ask.classList.add('show'); }, 1800);
     if(yes) yes.addEventListener('click', async ()=>{
       try{
